@@ -11,7 +11,7 @@ from app.rag.store import chunk_count, listed_sources
 from app.schemas import AskRequest, AskResponse, Citation, GradedChunk, HealthResponse, PipelineTrace
 
 settings = get_settings()
-app = FastAPI(title="Grounded RAG", version="0.1.0")
+app = FastAPI(title="Tether", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,

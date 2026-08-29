@@ -3,11 +3,11 @@ import { askQuestion, getHealth, ingestCorpus, type AskResponse, type Health } f
 
 const EXAMPLES = [
   {
-    label: "Grounded",
+    label: "Should cite",
     text: "How many bits is the IPv4 version field, and what does Time to Live mean?",
   },
   {
-    label: "Grounded",
+    label: "Should cite",
     text: "What default TCP ports do the http and https URI schemes use?",
   },
   {
@@ -84,10 +84,10 @@ export default function App() {
     <div className="shell">
       <header className="masthead">
         <div>
-          <p className="wordmark">
-            Grounded <em>RAG</em>
+          <p className="wordmark">Tether</p>
+          <p className="tagline">
+            Answers stay tied to cited passages, or the desk refuses.
           </p>
-          <p className="tagline">Cite-or-refuse research Q&amp;A over a local RFC corpus.</p>
         </div>
         <div className="status">
           <span className={`pill ${health?.llm_configured ? "is-ok" : "is-warn"}`}>

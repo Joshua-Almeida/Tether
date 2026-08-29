@@ -28,7 +28,7 @@ def citation_precision(answer: str, citations: list[dict]) -> float:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run Grounded RAG evals")
+    parser = argparse.ArgumentParser(description="Run Tether retrieval and refuse evals")
     parser.add_argument("--skip-llm", action="store_true", help="retrieval-only; skip ask/refuse")
     args = parser.parse_args()
     gold = json.loads((Path(__file__).parent / "gold.json").read_text(encoding="utf-8"))

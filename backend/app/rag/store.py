@@ -9,7 +9,7 @@ from langchain_core.documents import Document
 from app.config import BACKEND_DIR, get_settings
 from app.llm import embedding_model
 
-COLLECTION = "grounded_rfc"
+COLLECTION = "tether_rfc"
 
 
 def chroma() -> Chroma:
