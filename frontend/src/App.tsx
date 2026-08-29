@@ -33,10 +33,6 @@ const EXAMPLES = [
     label: "Should refuse",
     text: "Who won the 2018 FIFA World Cup?",
   },
-  {
-    label: "Compare this",
-    text: "What is Apple's current stock price?",
-  },
 ];
 
 type View = "desk" | "briefing";
@@ -140,9 +136,7 @@ export default function App() {
       <header className="masthead">
         <div>
           <p className="wordmark">Tether</p>
-          <p className="tagline">
-            Answers stay tied to cited passages, or the desk refuses.
-          </p>
+          <p className="tagline">Cite or refuse.</p>
         </div>
         <div className="mast-end">
           <nav className="nav" aria-label="Desk sections">

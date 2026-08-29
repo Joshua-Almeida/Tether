@@ -79,21 +79,12 @@ export default function Folio({ busy, result, variant = "default" }: Props) {
             Working the blotter
           </p>
           <h3>{naive ? "Retrieving, then answering" : "Retrieving, then grading"}</h3>
-          <p>
-            {naive
-              ? "Naive RAG skips the grader and the refuse gate."
-              : "A rewrite runs only if no passage is relevant. The folio fills when the graph decides."}
-          </p>
         </div>
       )}
 
       {!result && !asking && (
         <div className="folio-empty">
-          <h3>Nothing on the blotter yet</h3>
-          <p>
-            Ask a question the RFCs can prove, compare it with naive RAG, or try the World Cup
-            prompt to see a refusal.
-          </p>
+          <h3>No answer yet</h3>
         </div>
       )}
 
@@ -134,11 +125,7 @@ export default function Folio({ busy, result, variant = "default" }: Props) {
               ))}
             </ol>
           ) : (
-            <p className="hint">
-              {refused
-                ? "No footnotes. The desk refused rather than invent a source."
-                : "No footnotes. Naive mode left the answer untethered."}
-            </p>
+            <p className="hint">No footnotes.</p>
           )}
         </>
       )}

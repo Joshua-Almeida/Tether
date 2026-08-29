@@ -40,11 +40,7 @@ export default function Composer({
   return (
     <section className="blotter">
       <p className="eyebrow">Composer</p>
-      <h2>Ask the desk</h2>
-      <p className="hint">
-        Grounded mode cites retrieved passages or refuses. Naive mode is ordinary RAG: retrieve,
-        then let the model talk. Compare runs both on the same question.
-      </p>
+      <h2>Ask</h2>
       <form onSubmit={onAsk}>
         <ModeChips mode={mode} onMode={onMode} disabled={busy !== null} />
         <label className="field-label" htmlFor="question">

@@ -123,7 +123,32 @@ def chunk_count() -> int:
         return 0
 
 
+def sources_from_index() -> list[str]:
+    found: set[str] = set()
+    for doc in load_indexed_documents():
+        source = str(doc.metadata.get("source") or "").strip()
+        if source:
+            found.add(source)
+    return sorted(found)
+
+
+def delete_by_source(source_id: str) -> None:
+    settings = get_settings()
+    if not settings.chroma_path.exists():
+        return
+    try:
+        client = PersistentClient(path=str(settings.chroma_path))
+        collection = client.get_or_create_collection(COLLECTION)
+        collection.delete(where={"source": source_id})
+    except Exception:
+        pass
+    clear_lexical_index()
+
+
 def listed_sources() -> list[str]:
+    indexed = sources_from_index()
+    if indexed:
+        return indexed
     return sorted(
         path.stem for path in corpus_dir().glob("*.txt") if path.name.lower() != "license.txt"
     )
