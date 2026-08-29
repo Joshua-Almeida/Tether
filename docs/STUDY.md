@@ -43,7 +43,7 @@ Gold lives in `backend/evals/gold.json`.
 | Faithfulness | Answer claims supported by passages | `sentences_without_citations` refuses long uncited sentences even when some `[n]` exist |
 | Refusal accuracy | Out-of-corpus questions do not get fake footnotes | Gold `refuse` rows must `decision == refuse` |
 
-Say: “citation filter is precision on ids; sentence-level faithfulness refuses leftover claims.”
+`--skip-llm` is retrieval only (still needs an ingested index and embeddings). Full `python evals/run_eval.py` calls the live graph. Retrieval misses fail the process. Faith/refuse LLM misses print FAIL and a note; they do not crash the runner. A full run on this laptop scored 1.00 on retrieval, faith, and refuse; reproduce a miss before treating it as a product bug.
 
 ## Failure modes
 

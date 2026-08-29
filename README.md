@@ -101,7 +101,7 @@ python evals\run_eval.py --skip-llm
 python evals\run_eval.py
 ```
 
-`--skip-llm` scores retrieval gold only (needs an ingested index). Full eval calls the live LLM.
+`pytest` skips live LLM tests (`-m "not llm"`). `--skip-llm` scores retrieval gold only (needs an ingested index + embeddings). Full eval calls the live graph; LLM misses print FAIL but do not fail the process.
 
 ## Docs
 

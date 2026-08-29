@@ -14,6 +14,6 @@ if (-not (Test-Path -LiteralPath (Join-Path $Web "node_modules"))) {
     npm install
 }
 
-Write-Host "Web  http://127.0.0.1:5173"
+Write-Host "Web  http://127.0.0.1:5173  (strict port; stop other Vite if bind fails)"
 Write-Host "Do not run this from backend. API is .\scripts\dev-api.ps1"
 npm run dev

@@ -8,9 +8,8 @@ from pathlib import Path
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 
-from app.graph.crag import run_crag  # noqa: E402
-from app.rag.citations import parse_citation_ids  # noqa: E402
-from app.rag.store import retrieve  # noqa: E402
+from app.rag.citations import parse_citation_ids, sentences_without_citations  # noqa: E402
+from app.rag.store import chunk_count, retrieve  # noqa: E402
 
 
 def retrieval_hit(question: str, must_sources: list[str], k: int = 6) -> bool:
@@ -27,10 +26,25 @@ def citation_precision(answer: str, citations: list[dict]) -> float:
     return sum(1 for item in cited if item in valid) / len(cited)
 
 
+def faith_ok(state: dict) -> bool:
+    answer = state.get("answer") or ""
+    citations = state.get("citations") or []
+    if state.get("decision") != "answer":
+        return False
+    if citation_precision(answer, citations) != 1.0:
+        return False
+    return not sentences_without_citations(answer)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run Tether retrieval and refuse evals")
     parser.add_argument("--skip-llm", action="store_true", help="retrieval-only; skip ask/refuse")
     args = parser.parse_args()
+
+    if chunk_count() == 0:
+        print("Index is empty. Ingest first: python -m app.ingest")
+        raise SystemExit(2)
+
     gold = json.loads((Path(__file__).parent / "gold.json").read_text(encoding="utf-8"))
 
     retrieval_scores = []
@@ -41,28 +55,40 @@ def main() -> None:
 
     recall = sum(retrieval_scores) / len(retrieval_scores)
     print(f"retrieval recall@k (source): {recall:.2f}")
+    retrieval_ok = all(retrieval_scores)
 
     if args.skip_llm:
-        return
+        raise SystemExit(0 if retrieval_ok else 1)
+
+    from app.graph.crag import run_crag  # noqa: WPS433
 
     faith_scores = []
     refuse_scores = []
     for row in gold["retrieval"]:
         state = run_crag(row["question"])
-        ok = state.get("decision") == "answer" and citation_precision(
-            state.get("answer") or "", state.get("citations") or []
-        ) == 1.0
+        ok = faith_ok(state)
         faith_scores.append(ok)
-        print(f"faith/cite {'PASS' if ok else 'FAIL'} {row['id']} -> {state.get('decision')}")
+        reason = state.get("refuse_reason") or ""
+        print(
+            f"faith/cite {'PASS' if ok else 'FAIL'} {row['id']} -> "
+            f"{state.get('decision')} {reason}".rstrip()
+        )
 
     for row in gold["refuse"]:
         state = run_crag(row["question"])
-        ok = state.get("decision") == "refuse"
+        ok = state.get("decision") == "refuse" and not (state.get("citations") or [])
         refuse_scores.append(ok)
-        print(f"refuse     {'PASS' if ok else 'FAIL'} {row['id']} -> {state.get('decision')}")
+        reason = state.get("refuse_reason") or ""
+        print(
+            f"refuse     {'PASS' if ok else 'FAIL'} {row['id']} -> "
+            f"{state.get('decision')} {reason}".rstrip()
+        )
 
     print(f"citation-precision+answer: {sum(faith_scores) / len(faith_scores):.2f}")
     print(f"refuse accuracy:           {sum(refuse_scores) / len(refuse_scores):.2f}")
+    if not all(faith_scores) or not all(refuse_scores):
+        print("note: LLM rows are observational. A miss is not a runner crash; see docs/STUDY.md.")
+    raise SystemExit(0 if retrieval_ok else 1)
 
 
 if __name__ == "__main__":

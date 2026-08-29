@@ -516,6 +516,24 @@ textarea:focus {
   }
 }
 
+@media (max-width: 420px) {
+  .wordmark {
+    font-size: 26px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .folio {
+    padding: var(--space-3);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btn,
   .example,

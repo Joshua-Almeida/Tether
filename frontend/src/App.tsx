@@ -53,6 +53,8 @@ export default function App() {
 
   useEffect(() => {
     void refreshHealth();
+    const id = window.setInterval(() => void refreshHealth(), 8000);
+    return () => window.clearInterval(id);
   }, []);
 
   async function onAsk(event: FormEvent) {
