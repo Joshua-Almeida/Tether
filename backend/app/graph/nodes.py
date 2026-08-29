@@ -30,9 +30,8 @@ GRADE_SYSTEM = (
 )
 
 REWRITE_SYSTEM = (
-    "Rewrite the user question to improve retrieval over a corpus of IETF RFC excerpts "
-    "(IPv4, TCP, URI syntax, HTTP semantics). Keep a single concise question. "
-    "Do not answer it."
+    "Rewrite the user question to improve retrieval over the documents on the desk. "
+    "Keep a single concise question. Do not answer it."
 )
 
 GENERATE_SYSTEM = (

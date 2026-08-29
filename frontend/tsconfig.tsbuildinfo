@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/briefing.tsx","./src/composer.tsx","./src/folio.tsx","./src/modechips.tsx","./src/statuspills.tsx","./src/trace.tsx","./src/api.ts","./src/main.tsx","./src/vite-env.d.ts"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/briefing.tsx","./src/composer.tsx","./src/folio.tsx","./src/library.tsx","./src/modechips.tsx","./src/statuspills.tsx","./src/trace.tsx","./src/api.ts","./src/main.tsx","./src/vite-env.d.ts"],"version":"5.9.3"}

@@ -18,17 +18,46 @@ def title_for(filename: str) -> str:
     return stem or "Untitled document"
 
 
+def _pdf_text(data: bytes) -> str:
+    from pypdf import PdfReader
+    from pypdf.errors import FileNotDecryptedError, PdfReadError
+
+    try:
+        reader = PdfReader(io.BytesIO(data), strict=False)
+    except PdfReadError as exc:
+        raise ValueError(f"Could not open that PDF. {exc}") from exc
+    except Exception as exc:
+        raise ValueError(f"Could not open that PDF. {exc}") from exc
+
+    if getattr(reader, "is_encrypted", False):
+        try:
+            reader.decrypt("")
+        except Exception as exc:
+            raise ValueError("That PDF is password-protected.") from exc
+
+    pages: list[str] = []
+    for page in reader.pages:
+        try:
+            part = page.extract_text() or ""
+        except (PdfReadError, FileNotDecryptedError, KeyError, TypeError, ValueError):
+            part = ""
+        if part.strip():
+            pages.append(part.strip())
+    text = "\n\n".join(pages)
+    if not text.strip():
+        raise ValueError(
+            "No text could be read from that PDF. Use a text-based PDF, not a scanned image."
+        )
+    return text
+
+
 def extract_text(filename: str, data: bytes) -> str:
     suffix = Path(filename).suffix.lower()
     if suffix not in ALLOWED:
         raise ValueError("Use a PDF, .txt, or Markdown file.")
     if suffix in {".txt", ".md", ".markdown"}:
-        return data.decode("utf-8", errors="replace")
-    from pypdf import PdfReader
-
-    reader = PdfReader(io.BytesIO(data))
-    pages = [(page.extract_text() or "").strip() for page in reader.pages]
-    text = "\n\n".join(part for part in pages if part)
-    if not text.strip():
-        raise ValueError("That PDF has no extractable text. Try a text-based PDF, not a scan.")
-    return text
+        text = data.decode("utf-8", errors="replace")
+        if not text.strip():
+            raise ValueError(f"{filename} is empty.")
+        return text
+    return _pdf_text(data)

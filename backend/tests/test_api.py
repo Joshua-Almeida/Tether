@@ -5,6 +5,13 @@ from fastapi.testclient import TestClient
 from app import main as mainmod
 
 
+def test_root_identifies_tether_api():
+    client = TestClient(mainmod.app)
+    body = client.get("/").json()
+    assert body["name"] == "Tether API"
+    assert body["upload"] == "/api/upload"
+
+
 def test_health_empty_index(monkeypatch):
     monkeypatch.setattr(mainmod, "chunk_count", lambda: 0)
     monkeypatch.setattr(mainmod, "listed_sources", lambda: ["rfc791"])
@@ -55,6 +62,27 @@ def test_corpus_lists_rfc_titles():
     assert response.status_code == 200
     ids = {item["id"] for item in response.json()["sources"]}
     assert ids == {"rfc791", "rfc793", "rfc3986", "rfc9110"}
+
+
+def test_upload_rejects_unsupported_type():
+    client = TestClient(mainmod.app)
+    response = client.post(
+        "/api/upload",
+        files=[("files", ("notes.pptx", b"not-text", "application/vnd.ms-powerpoint"))],
+    )
+    assert response.status_code == 400
+
+
+def test_library_lists_sources(monkeypatch):
+    monkeypatch.setattr(
+        mainmod,
+        "library_rows",
+        lambda: [{"id": "paper", "title": "A Paper", "filename": "paper.pdf", "origin": "upload", "chunks": 4}],
+    )
+    client = TestClient(mainmod.app)
+    body = client.get("/api/library").json()
+    assert body["sources"][0]["id"] == "paper"
+    assert body["sources"][0]["origin"] == "upload"
 
 
 def test_health_reports_retrieve_mode(monkeypatch):

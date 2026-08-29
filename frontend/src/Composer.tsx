@@ -12,12 +12,11 @@ type Props = {
   onQuestion: (value: string) => void;
   mode: DeskMode;
   onMode: (mode: DeskMode) => void;
-  busy: "ask" | "ingest" | null;
+  busy: "ask" | "ingest" | "upload" | null;
   error: string | null;
   contrast: string | null;
   examples: Example[];
   onAsk: (event: FormEvent) => void;
-  onIngest: () => void;
   children?: ReactNode;
 };
 
@@ -31,11 +30,9 @@ export default function Composer({
   contrast,
   examples,
   onAsk,
-  onIngest,
   children,
 }: Props) {
-  const askLabel =
-    busy === "ask" ? "Working…" : mode === "compare" ? "Compare" : "Ask";
+  const askLabel = busy === "ask" ? "Working…" : mode === "compare" ? "Compare" : "Ask";
 
   return (
     <section className="blotter">
@@ -54,14 +51,6 @@ export default function Composer({
         <div className="actions">
           <button className="btn btn-primary" type="submit" disabled={busy !== null}>
             {askLabel}
-          </button>
-          <button
-            className="btn btn-ghost"
-            type="button"
-            onClick={onIngest}
-            disabled={busy !== null}
-          >
-            {busy === "ingest" ? "Indexing…" : "Ingest corpus"}
           </button>
         </div>
       </form>

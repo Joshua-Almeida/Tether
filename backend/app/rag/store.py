@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from chromadb import PersistentClient
@@ -12,6 +13,7 @@ from app.rag.hybrid import BM25Index, rrf_fuse
 
 COLLECTION = "tether_rfc"
 
+_INDEX_LOCK = threading.Lock()
 _lexical: BM25Index | None = None
 _lexical_n = -1
 
@@ -31,14 +33,21 @@ def corpus_dir() -> Path:
 
 
 def reset_collection() -> None:
-    settings = get_settings()
-    settings.chroma_path.mkdir(parents=True, exist_ok=True)
-    client = PersistentClient(path=str(settings.chroma_path))
-    try:
-        client.delete_collection(COLLECTION)
-    except Exception:
-        pass
-    clear_lexical_index()
+    with _INDEX_LOCK:
+        settings = get_settings()
+        settings.chroma_path.mkdir(parents=True, exist_ok=True)
+        client = PersistentClient(path=str(settings.chroma_path))
+        try:
+            client.delete_collection(COLLECTION)
+        except Exception:
+            pass
+        clear_lexical_index()
+
+
+def add_documents(documents: list[Document]) -> None:
+    with _INDEX_LOCK:
+        chroma().add_documents(documents)
+        clear_lexical_index()
 
 
 def clear_lexical_index() -> None:
@@ -133,16 +142,17 @@ def sources_from_index() -> list[str]:
 
 
 def delete_by_source(source_id: str) -> None:
-    settings = get_settings()
-    if not settings.chroma_path.exists():
-        return
-    try:
-        client = PersistentClient(path=str(settings.chroma_path))
-        collection = client.get_or_create_collection(COLLECTION)
-        collection.delete(where={"source": source_id})
-    except Exception:
-        pass
-    clear_lexical_index()
+    with _INDEX_LOCK:
+        settings = get_settings()
+        if not settings.chroma_path.exists():
+            return
+        try:
+            client = PersistentClient(path=str(settings.chroma_path))
+            collection = client.get_or_create_collection(COLLECTION)
+            collection.delete(where={"source": source_id})
+        except Exception:
+            pass
+        clear_lexical_index()
 
 
 def listed_sources() -> list[str]:

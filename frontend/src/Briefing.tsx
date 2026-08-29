@@ -73,11 +73,7 @@ export default function Briefing({
 
       <section>
         <p className="eyebrow">Corpus</p>
-        <p>
-          {health?.chunk_count
-            ? `${health.chunk_count} chunks indexed.`
-            : "Index empty until you ingest."}
-        </p>
+        <p>{health?.index_ready ? "Index ready." : "Upload a file or load the RFC demo."}</p>
         <ul className="corpus">
           {corpus.map((source) => (
             <li key={source.id}>

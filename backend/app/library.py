@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 from app.config import BACKEND_DIR
-from app.rag.store import sources_from_index
+from app.rag.store import delete_by_source, sources_from_index
 
 LIBRARY_PATH = BACKEND_DIR / "data" / "library.json"
 
@@ -44,6 +43,11 @@ def upsert_catalog(entries: list[dict[str, Any]]) -> None:
 
 def drop_catalog(source_id: str) -> None:
     save_catalog([row for row in load_catalog() if str(row.get("id")) != source_id])
+
+
+def remove_source(source_id: str) -> None:
+    delete_by_source(source_id)
+    drop_catalog(source_id)
 
 
 def library_rows() -> list[dict[str, Any]]:

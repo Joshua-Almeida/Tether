@@ -2,32 +2,37 @@ import { FormEvent, useEffect, useState } from "react";
 import Briefing from "./Briefing";
 import Composer from "./Composer";
 import Folio from "./Folio";
+import Library from "./Library";
 import StatusPills from "./StatusPills";
 import Trace from "./Trace";
 import {
   askQuestion,
   compareQuestion,
+  deleteLibrarySource,
   getCorpus,
   getHealth,
+  getLibrary,
   getRetrievalEval,
   humanizeError,
   ingestCorpus,
+  uploadDocuments,
   type AskResponse,
   type CompareResponse,
   type CorpusSource,
   type DeskMode,
   type Health,
+  type LibrarySource,
   type RetrievalEval,
 } from "./api";
 
 const EXAMPLES = [
   {
-    label: "Should cite",
-    text: "How many bits is the IPv4 version field, and what does Time to Live mean?",
+    label: "Paper",
+    text: "What is the main claim, and what evidence supports it?",
   },
   {
-    label: "Should cite",
-    text: "What default TCP ports do the http and https URI schemes use?",
+    label: "RFC demo",
+    text: "How many bits is the IPv4 version field, and what does Time to Live mean?",
   },
   {
     label: "Should refuse",
@@ -36,6 +41,7 @@ const EXAMPLES = [
 ];
 
 type View = "desk" | "briefing";
+type Busy = "ask" | "ingest" | "upload" | null;
 
 export default function App() {
   const [view, setView] = useState<View>("desk");
@@ -43,9 +49,10 @@ export default function App() {
   const [mode, setMode] = useState<DeskMode>("grounded");
   const [health, setHealth] = useState<Health | null>(null);
   const [corpus, setCorpus] = useState<CorpusSource[]>([]);
+  const [library, setLibrary] = useState<LibrarySource[]>([]);
   const [result, setResult] = useState<AskResponse | null>(null);
   const [compare, setCompare] = useState<CompareResponse | null>(null);
-  const [busy, setBusy] = useState<"ask" | "ingest" | null>(null);
+  const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [evalResult, setEvalResult] = useState<RetrievalEval | null>(null);
   const [evalBusy, setEvalBusy] = useState(false);
@@ -62,14 +69,24 @@ export default function App() {
       setError(
         humanizeError(
           err,
-          "The desk cannot reach the API. Start the backend on 127.0.0.1:8000."
+          "The desk cannot reach the API. Start scripts\\dev-api.ps1 (port 8765)."
         )
       );
     }
   }
 
+  async function refreshLibrary() {
+    try {
+      const payload = await getLibrary();
+      setLibrary(payload.sources);
+    } catch {
+      setLibrary([]);
+    }
+  }
+
   useEffect(() => {
     void refreshHealth();
+    void refreshLibrary();
     void getCorpus()
       .then((payload) => setCorpus(payload.sources))
       .catch(() => setCorpus([]));
@@ -97,12 +114,41 @@ export default function App() {
     }
   }
 
-  async function onIngest() {
+  async function onUpload(files: File[]) {
+    setBusy("upload");
+    setError(null);
+    try {
+      await uploadDocuments(files);
+      await refreshHealth();
+      await refreshLibrary();
+    } catch (err) {
+      setError(humanizeError(err, "Upload failed. Use a PDF or text file and try again."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onRemove(sourceId: string) {
+    setBusy("ingest");
+    setError(null);
+    try {
+      await deleteLibrarySource(sourceId);
+      await refreshHealth();
+      await refreshLibrary();
+    } catch (err) {
+      setError(humanizeError(err, "Could not remove that document."));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onLoadDemo() {
     setBusy("ingest");
     setError(null);
     try {
       await ingestCorpus();
       await refreshHealth();
+      await refreshLibrary();
     } catch (err) {
       setError(humanizeError(err, "Indexing failed. Check embedding keys and try again."));
     } finally {
@@ -173,6 +219,13 @@ export default function App() {
         />
       ) : (
         <main className={`desk ${compare ? "is-compare" : ""}`}>
+          <Library
+            sources={library}
+            busy={busy}
+            onUpload={(files) => void onUpload(files)}
+            onRemove={(sourceId) => void onRemove(sourceId)}
+            onLoadDemo={() => void onLoadDemo()}
+          />
           <Composer
             question={question}
             onQuestion={setQuestion}
@@ -183,7 +236,6 @@ export default function App() {
             contrast={compare?.contrast ?? null}
             examples={EXAMPLES}
             onAsk={onAsk}
-            onIngest={() => void onIngest()}
           >
             {result && <Trace result={result} />}
             {compare && (

@@ -7,8 +7,10 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config import get_settings
+from app.library import upsert_catalog
 from app.llm import require_llm
-from app.rag.store import chroma, clear_lexical_index, corpus_dir, reset_collection
+from app.rag.extract import extract_text, source_id_for, title_for
+from app.rag.store import add_documents, corpus_dir, delete_by_source
 
 SECTION_RE = re.compile(r"^(\d+(?:\.\d+)*)\.?\s+(\S.*)$")
 
@@ -30,7 +32,13 @@ def heading_for_chunk(text: str, chunk: str) -> str:
     return heading[:160]
 
 
-def split_corpus() -> list[Document]:
+def split_text(
+    text: str,
+    source_id: str,
+    title: str,
+    url: str = "",
+    origin: str = "demo",
+) -> list[Document]:
     settings = get_settings()
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.chunk_size,
@@ -38,42 +46,99 @@ def split_corpus() -> list[Document]:
         separators=["\n\n", "\n", ". ", " "],
     )
     documents: list[Document] = []
-    for source in load_sources():
-        text_path = corpus_dir() / source["path"]
-        text = text_path.read_text(encoding="utf-8")
-        chunks = splitter.split_text(text)
-        for index, chunk in enumerate(chunks):
-            chunk_id = f"{source['id']}:{index}"
-            documents.append(
-                Document(
-                    page_content=chunk,
-                    metadata={
-                        "source": source["id"],
-                        "title": source["title"],
-                        "url": source["url"],
-                        "chunk_id": chunk_id,
-                        "section": heading_for_chunk(text, chunk),
-                    },
-                )
+    for index, chunk in enumerate(splitter.split_text(text)):
+        documents.append(
+            Document(
+                page_content=chunk,
+                metadata={
+                    "source": source_id,
+                    "title": title,
+                    "url": url,
+                    "chunk_id": f"{source_id}:{index}",
+                    "section": heading_for_chunk(text, chunk),
+                    "origin": origin,
+                },
             )
+        )
     return documents
+
+
+def split_corpus() -> list[Document]:
+    documents: list[Document] = []
+    for source in load_sources():
+        text = (corpus_dir() / source["path"]).read_text(encoding="utf-8")
+        documents.extend(
+            split_text(
+                text,
+                source_id=str(source["id"]),
+                title=str(source["title"]),
+                url=str(source.get("url") or ""),
+                origin="demo",
+            )
+        )
+    return documents
+
+
+def _index_documents(documents: list[Document], entries: list[dict]) -> dict:
+    ids = {str(doc.metadata["source"]) for doc in documents}
+    for source_id in ids:
+        delete_by_source(source_id)
+    add_documents(documents)
+    upsert_catalog(entries)
+    return {
+        "chunks": len(documents),
+        "sources": sorted(ids),
+        "persist": str(get_settings().chroma_path),
+    }
 
 
 def ingest() -> dict:
     require_llm()
-    settings = get_settings()
-    persist = settings.chroma_path
-    persist.mkdir(parents=True, exist_ok=True)
-    reset_collection()
     documents = split_corpus()
-    store = chroma()
-    store.add_documents(documents)
-    clear_lexical_index()
-    return {
-        "chunks": len(documents),
-        "sources": sorted({str(doc.metadata["source"]) for doc in documents}),
-        "persist": str(persist),
-    }
+    counts: dict[str, int] = {}
+    for doc in documents:
+        source_id = str(doc.metadata["source"])
+        counts[source_id] = counts.get(source_id, 0) + 1
+    titles = {str(item["id"]): str(item["title"]) for item in load_sources()}
+    entries = [
+        {
+            "id": source_id,
+            "title": titles.get(source_id, source_id),
+            "filename": "",
+            "origin": "demo",
+            "chunks": counts[source_id],
+        }
+        for source_id in counts
+    ]
+    return _index_documents(documents, entries)
+
+
+def ingest_uploads(files: list[tuple[str, bytes]]) -> dict:
+    require_llm()
+    documents: list[Document] = []
+    entries: list[dict] = []
+    for filename, data in files:
+        text = extract_text(filename, data)
+        if not text.strip():
+            raise ValueError(f"{filename} has no extractable text.")
+        source_id = source_id_for(filename)
+        title = title_for(filename)
+        chunks = split_text(text, source_id, title, origin="upload")
+        if not chunks:
+            raise ValueError(f"{filename} produced no chunks.")
+        documents.extend(chunks)
+        entries.append(
+            {
+                "id": source_id,
+                "title": title,
+                "filename": filename,
+                "origin": "upload",
+                "chunks": len(chunks),
+            }
+        )
+    if not documents:
+        raise ValueError("No files to index.")
+    return _index_documents(documents, entries)
 
 
 def main() -> None:

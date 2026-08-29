@@ -6,7 +6,8 @@ Instructions for the Tether desk UI. Tokens live in `frontend/src/styles.css` (`
 
 The product is a **research desk**, not a chat product and not a dashboard.
 
-- **Composer** (left, dark walnut blotter): the question, pipeline chips, actions, examples, and inspectable trace. This is the working surface.
+- **Shelf** (left): drop zone for PDF/text, document list, Load RFC demo.
+- **Composer** (center, dark walnut blotter): the question, pipeline chips, examples, and inspectable trace.
 - **Folio** (right, parchment): the cited answer, footnotes, empty/loading/refused states. Compare stacks a grounded folio above a naive folio.
 - **Briefing** (full-width parchment packet): purpose, difficulty, graph, corpus, retrieval gold. Not a marketing landing page.
 

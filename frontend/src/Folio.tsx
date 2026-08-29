@@ -2,7 +2,7 @@ import { useState } from "react";
 import { warningCopy, type AskResponse } from "./api";
 
 type Props = {
-  busy: "ask" | "ingest" | null;
+  busy: "ask" | "ingest" | "upload" | null;
   result: AskResponse | null;
   variant?: "default" | "grounded" | "naive";
 };
@@ -84,7 +84,7 @@ export default function Folio({ busy, result, variant = "default" }: Props) {
 
       {!result && !asking && (
         <div className="folio-empty">
-          <h3>No answer yet</h3>
+          <h3>Upload a document, then ask</h3>
         </div>
       )}
 

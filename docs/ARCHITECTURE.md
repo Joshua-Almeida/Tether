@@ -7,7 +7,7 @@ Tether is a local cite-or-refuse RAG service. The UI is a Vite SPA. The API is F
 ```
 frontend/
   index.html
-  vite.config.ts          # host 127.0.0.1:5173, proxy /api → 127.0.0.1:8000
+  vite.config.ts          # host 127.0.0.1:5173, proxy /api → 127.0.0.1:8765
   src/
     main.tsx
     App.tsx               # desk | briefing
@@ -48,7 +48,7 @@ The git folder may still be named `grounded-rag`. That path is not the product n
 3. `grounded` calls `run_crag`. `naive` calls `run_naive` (retrieve + generate, no grade / rewrite / refuse gate).
 4. `respond.ask_response` maps graph state to `status`, `citations`, `trace` (including steps, retrieval method, grade scores), `latency_ms`, and `warnings`.
 
-`GET /api/health` reports `llm_configured`, `index_ready`, `chunk_count`, corpus source ids (from files, not from Chroma), `retrieve_mode`, and `rewrite_max`. `GET /api/corpus` returns RFC titles and canonical URLs. `GET /api/eval/retrieval` scores gold `must_sources` against the live index. `POST /api/ingest` rebuilds collection `tether_rfc` (deletes the collection, then adds chunks). It does not `rmtree` the persist folder, which locks on Windows while uvicorn is up.
+`GET /api/health` reports `llm_configured`, `index_ready`, `chunk_count`, indexed source ids, `retrieve_mode`, and `rewrite_max`. `GET /api/corpus` returns RFC demo titles. `GET /api/library` is the shelf (uploads + demo). `POST /api/upload` extracts PDF/text, chunks, and adds to Chroma without wiping other sources. `DELETE /api/library/{id}` removes one source. `POST /api/ingest` re-indexes only the RFC demo. `GET /api/eval/retrieval` scores gold `must_sources` against the live index.
 
 Settings are loaded once (`lru_cache`). Restart uvicorn after editing `.env`.
 

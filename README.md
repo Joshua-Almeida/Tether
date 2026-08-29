@@ -1,114 +1,69 @@
 # Tether
 
-Tether is cite-or-refuse Corrective RAG over a local IETF RFC corpus (IPv4, TCP, URI, HTTP). It retrieves passages with hybrid search (dense + BM25), grades them, optionally rewrites the query, then either answers with numbered footnotes or refuses. It does not guess from model memory.
+Cite-or-refuse RAG. Upload a paper (or load the bundled IETF RFC excerpts), ask a question, and the desk either answers with numbered footnotes or refuses. It does not invent sources from model memory.
 
-The desk can also run **naive RAG** on the same question — retrieve, then let the model talk — so you can show the ablation. **Compare** runs both. **Briefing** is the talk track: purpose, what is hard, how the graph works, corpus, and retrieval gold.
+**Grounded** is Corrective RAG: hybrid retrieve (dense + BM25), grade, optional rewrite, then a faithfulness gate. **Naive** is ordinary retrieve-then-generate. **Compare** runs both on the same question.
 
-**Who it is for.** Anyone who needs to show that an LLM answer is tied to retrieved text — resume reviewers, interviewers, and anyone tired of fluent hallucinations. The problem it attacks is uncited generation: if the local corpus cannot support a claim, the desk refuses instead of inventing a footnote.
+## Features
 
-**Stack.** FastAPI, LangGraph, Chroma on disk, React + Vite, FastRouter or an OpenAI-compatible chat API. No hosted database. The index lives at `backend/data/chroma`. Never commit `.env`.
+- Upload PDF, `.txt`, or Markdown and ask against *your* files
+- Cite-or-refuse answers with clickable footnotes
+- Grounded vs naive compare
+- Inspectable pipeline trace (retrieve, grade, rewrite, decision)
+- Local Chroma index — no hosted database
+- Retrieval gold eval over the RFC demo
 
-```mermaid
-flowchart TD
-  ask[Ask] --> retrieve
-  retrieve --> grade
-  grade --> route{route_after_grade}
-  route -->|at least one relevant| generate
-  route -->|none relevant, rewrite budget left| rewrite
-  route -->|none relevant, budget spent| refuse
-  rewrite --> retrieve
-  generate --> folio[Folio: cited answer or refuse]
-  refuse --> folio
+## Stack
+
+FastAPI, LangGraph, Chroma, React + Vite. Chat and embeddings go through FastRouter or any OpenAI-compatible API.
+
+## Setup
+
+```bash
+cp .env.example .env
 ```
 
-## Windows runbook (PowerShell)
+Set `FASTROUTER_API_KEY` or `OPENAI_API_KEY`. Do not commit `.env`.
 
-Repo path: `C:\Users\Joshua\grounded-rag`. Use **two terminals**. Do not run `npm` from `backend`.
+**API** (from the repo root, Python 3.11+):
 
-### 1. Env
-
-```powershell
-cd C:\Users\Joshua\grounded-rag
-Copy-Item .env.example .env
-notepad .env
+```bash
+python -m venv backend/.venv
+# Windows: backend\.venv\Scripts\Activate.ps1
+# macOS / Linux: source backend/.venv/bin/activate
+pip install -r backend/requirements.txt
 ```
 
-Paste `FASTROUTER_API_KEY` and/or `OPENAI_API_KEY`. Chat and embeddings use FastRouter when that key is set (`text-embedding-3-small` works there). To force OpenAI embeddings while chat stays on FastRouter, set `EMBEDDING_BASE_URL` and `EMBEDDING_API_KEY`. Do not commit `.env`. Restart the API after editing `.env`.
-
-### 2. Backend venv (once)
-
 ```powershell
-cd C:\Users\Joshua\grounded-rag
-python -m venv backend\.venv
-.\backend\.venv\Scripts\Activate.ps1
-pip install -r backend\requirements.txt
-```
-
-### 3. Two terminals
-
-If scripts are blocked: `Set-ExecutionPolicy -Scope Process Bypass`
-
-**Terminal 1 — API** (`http://127.0.0.1:8000`)
-
-```powershell
-cd C:\Users\Joshua\grounded-rag
+# From grounded-rag, frontend, or backend — two terminals:
 .\scripts\dev-api.ps1
-```
-
-That sets `PYTHONPATH` to `backend` and runs `python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000`.
-
-Equivalent by hand:
-
-```powershell
-cd C:\Users\Joshua\grounded-rag\backend
-.\.venv\Scripts\Activate.ps1
-$env:PYTHONPATH = "."
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-**Terminal 2 — web** (`http://127.0.0.1:5173`)
-
-```powershell
-cd C:\Users\Joshua\grounded-rag
 .\scripts\dev-web.ps1
 ```
 
-Vite binds **127.0.0.1** (Windows `localhost` can be IPv6-only) and proxies `/api` to port 8000.
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). The API is [http://127.0.0.1:8765](http://127.0.0.1:8765) (not 8000).
 
-### 4. Ingest, then ask
+## Use
 
-Empty index: `GET /api/health` has `index_ready: false`. Ask returns **409** until you ingest (desk button **Ingest corpus**, or `POST /api/ingest`). CLI ingest, from `backend` with `PYTHONPATH=.`:
+1. Drop a PDF or text file on the **Shelf**, or click **Load RFC demo**.
+2. Ask in **Grounded** mode. Off-corpus questions should refuse.
+3. Use **Compare** on something the documents cannot answer (e.g. “Who won the 2018 FIFA World Cup?”).
 
-```powershell
-python -m app.ingest
-```
+Ask returns 409 until at least one document is indexed.
 
-Grounded (should cite RFCs):
+## Tests
 
-- How many bits is the IPv4 version field, and what does Time to Live mean?
-- What default TCP ports do the http and https URI schemes use?
-
-Refuse (no fake footnotes):
-
-- Who won the 2018 FIFA World Cup?
-
-On the desk, **Grounded** is cite-or-refuse CRAG. **Naive** is retrieve-then-generate with the faithfulness gate off. **Compare** runs both on one question — use it on the World Cup prompt. **Briefing** is the talk track and a live retrieval-gold score. Re-ingest once if an older index is missing section headings on footnotes.
-
-## Tests and evals
-
-From `backend` with the venv active and `$env:PYTHONPATH = "."`:
-
-```powershell
-cd C:\Users\Joshua\grounded-rag\backend
+```bash
+cd backend
+# Windows: $env:PYTHONPATH = "."
+export PYTHONPATH=.
 pytest
-python evals\run_eval.py --skip-llm
-python evals\run_eval.py
+python evals/run_eval.py --skip-llm
 ```
 
-`pytest` skips live LLM tests (`-m "not llm"`). `--skip-llm` scores retrieval gold only (needs an ingested index + embeddings). Full eval calls the live graph; LLM misses print FAIL but do not fail the process.
+`--skip-llm` scores retrieval gold only (needs an index and embeddings). Full `python evals/run_eval.py` calls the live graph.
 
 ## Docs
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — request flow, graph, env, on-disk layout
-- [`docs/DESIGN.md`](docs/DESIGN.md) — desk + folio UI contract
-- [`docs/STUDY.md`](docs/STUDY.md) — interview notes (chunking, CRAG, metrics, failure modes)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Design](docs/DESIGN.md)
+- [Study notes](docs/STUDY.md)

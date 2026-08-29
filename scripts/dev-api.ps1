@@ -2,7 +2,9 @@ $ErrorActionPreference = "Stop"
 
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Backend = Join-Path $Root "backend"
+$AppDir = Join-Path $Backend "app"
 $Python = Join-Path $Backend ".venv\Scripts\python.exe"
+$Url = "http://127.0.0.1:8765"
 
 if (-not (Test-Path -LiteralPath $Python)) {
     Write-Host "Missing backend\.venv. From the repo root run:"
@@ -12,8 +14,17 @@ if (-not (Test-Path -LiteralPath $Python)) {
     exit 1
 }
 
+try {
+    $probe = Invoke-WebRequest -Uri "$Url/" -UseBasicParsing -TimeoutSec 3
+    if ($probe.Content -match "Tether API") {
+        Write-Host "API already running at $Url"
+        Write-Host "Open http://127.0.0.1:5173  (second terminal: scripts\dev-web.ps1)"
+        exit 0
+    }
+} catch {
+}
+
 $env:PYTHONPATH = $Backend
-Set-Location -LiteralPath $Backend
-Write-Host "API  http://127.0.0.1:8000   (PYTHONPATH=$Backend)"
-Write-Host "Do not run npm from backend. Web UI is .\scripts\dev-web.ps1"
-& $Python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+Write-Host "API  $Url"
+Write-Host "Web is a second terminal: scripts\dev-web.ps1"
+& $Python -m uvicorn app.main:app --reload --reload-dir $AppDir --app-dir $Backend --host 127.0.0.1 --port 8765

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     embedding_api_key: str = ""
 
     api_host: str = "127.0.0.1"
-    api_port: int = 8000
+    api_port: int = 8765
     cors_origins: str = "http://127.0.0.1:5173,http://localhost:5173"
 
     chroma_dir: str = str(BACKEND_DIR / "data" / "chroma")

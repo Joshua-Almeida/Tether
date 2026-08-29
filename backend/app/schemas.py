@@ -82,6 +82,19 @@ class CorpusResponse(BaseModel):
     sources: list[CorpusSource] = Field(default_factory=list)
 
 
+class LibrarySource(BaseModel):
+    id: str
+    title: str
+    filename: str = ""
+    origin: str = "upload"
+    chunks: int = 0
+    url: str = ""
+
+
+class LibraryResponse(BaseModel):
+    sources: list[LibrarySource] = Field(default_factory=list)
+
+
 class RetrievalEvalRow(BaseModel):
     id: str
     question: str

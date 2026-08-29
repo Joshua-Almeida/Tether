@@ -66,6 +66,15 @@ export type CorpusSource = {
   url: string;
 };
 
+export type LibrarySource = {
+  id: string;
+  title: string;
+  filename?: string;
+  origin?: string;
+  chunks?: number;
+  url?: string;
+};
+
 export type RetrievalEvalRow = {
   id: string;
   question: string;
@@ -107,16 +116,19 @@ export function humanizeError(err: unknown, fallback: string): string {
     lower === "request failed." ||
     lower === "request failed"
   ) {
-    return "The desk cannot reach the API. Start the backend on 127.0.0.1:8000.";
+    return "The desk cannot reach the API. Start scripts\\dev-api.ps1 (port 8765).";
   }
-  if (lower.includes("index is empty") || lower.includes("ingest first")) {
-    return "The index is empty. Ingest the RFC corpus before asking.";
+  if (lower.includes("index is empty") || lower.includes("ingest first") || lower.includes("upload a document")) {
+    return "Upload a document or load the RFC demo first.";
   }
   if (lower.includes("no llm key") || lower.includes("no api key")) {
     return "No API key found. Add FASTROUTER_API_KEY or OPENAI_API_KEY to the repo-root .env.";
   }
-  if (lower.startsWith("ingest failed")) {
-    return "Indexing failed. Check embedding keys and try Ingest corpus again.";
+  if (lower === "not found") {
+    return "Upload is missing. Restart scripts\\dev-api.ps1 and wait for Application startup complete.";
+  }
+  if (lower.startsWith("ingest failed") || lower.startsWith("could not index")) {
+    return raw.length <= 220 ? raw : "Could not index that file. Try a text-based PDF or .txt.";
   }
   if (lower.startsWith("rag pipeline failed")) {
     return "The pipeline could not finish. Try again, or ingest if the index looks stale.";
@@ -142,14 +154,18 @@ export function warningCopy(code: string): string {
   }
 }
 
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) || "http://127.0.0.1:8765";
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(path, {
+    response = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: {
         Accept: "application/json",
-        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...(init?.body && !(init.body instanceof FormData)
+          ? { "Content-Type": "application/json" }
+          : {}),
         ...init?.headers,
       },
     });
@@ -191,6 +207,22 @@ export function getRetrievalEval(): Promise<RetrievalEval> {
 
 export function ingestCorpus(): Promise<Record<string, unknown>> {
   return api("/api/ingest", { method: "POST" });
+}
+
+export function getLibrary(): Promise<{ sources: LibrarySource[] }> {
+  return api("/api/library");
+}
+
+export async function uploadDocuments(files: File[]): Promise<Record<string, unknown>> {
+  const body = new FormData();
+  for (const file of files) {
+    body.append("files", file);
+  }
+  return api("/api/upload", { method: "POST", body });
+}
+
+export function deleteLibrarySource(sourceId: string): Promise<{ ok: boolean }> {
+  return api(`/api/library/${encodeURIComponent(sourceId)}`, { method: "DELETE" });
 }
 
 export function askQuestion(question: string, mode: PipelineMode = "grounded"): Promise<AskResponse> {
