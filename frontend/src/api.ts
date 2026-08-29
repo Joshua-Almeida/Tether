@@ -57,6 +57,34 @@ function humanDetail(payload: unknown): string | null {
   return null;
 }
 
+export function humanizeError(err: unknown, fallback: string): string {
+  const raw = err instanceof Error ? err.message.trim() : "";
+  if (!raw || raw.startsWith("{") || raw.startsWith("[")) return fallback;
+  const lower = raw.toLowerCase();
+  if (
+    lower.includes("not reachable") ||
+    lower.includes("failed to fetch") ||
+    lower === "request failed." ||
+    lower === "request failed"
+  ) {
+    return "The desk cannot reach the API. Start the backend on 127.0.0.1:8000.";
+  }
+  if (lower.includes("index is empty") || lower.includes("ingest first")) {
+    return "The index is empty. Ingest the RFC corpus before asking.";
+  }
+  if (lower.includes("no llm key") || lower.includes("no api key")) {
+    return "No API key found. Add FASTROUTER_API_KEY or OPENAI_API_KEY to the repo-root .env.";
+  }
+  if (lower.startsWith("ingest failed")) {
+    return "Indexing failed. Check embedding keys and try Ingest corpus again.";
+  }
+  if (lower.startsWith("rag pipeline failed")) {
+    return "The pipeline could not finish. Try again, or ingest if the index looks stale.";
+  }
+  if (raw.length > 220) return fallback;
+  return raw;
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -83,6 +111,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
+    if (response.status >= 500 && !humanDetail(parsed)) {
+      throw new Error("Backend is not reachable.");
+    }
     throw new Error(humanDetail(parsed) || "Request failed.");
   }
 
