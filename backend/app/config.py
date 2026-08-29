@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     chunk_overlap: int = 120
     retrieve_k: int = 6
     rewrite_max: int = 1
+    grade_relevance_threshold: float = 0.5
 
     @property
     def llm_configured(self) -> bool:

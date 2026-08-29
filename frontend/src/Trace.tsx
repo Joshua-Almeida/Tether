@@ -34,6 +34,12 @@ export default function Trace({ result }: Props) {
           {result.trace.decision}
         </b>
       </div>
+      {result.trace.refuse_reason ? (
+        <div className="step">
+          <span className="step-label">Reason</span>
+          <b className="is-mute">{result.trace.refuse_reason}</b>
+        </div>
+      ) : null}
     </div>
   );
 }

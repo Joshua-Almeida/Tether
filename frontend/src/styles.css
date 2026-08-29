@@ -446,6 +446,14 @@ textarea:focus {
   color: var(--clay);
 }
 
+.step b.is-mute {
+  color: var(--parchment-mute);
+  font-weight: 400;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
 .loading {
   display: flex;
   align-items: center;

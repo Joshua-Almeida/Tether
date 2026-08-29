@@ -31,6 +31,7 @@ class PipelineTrace(BaseModel):
     retrieved_count: int = 0
     graded: list[GradedChunk] = Field(default_factory=list)
     decision: Literal["answer", "refuse"] = "refuse"
+    refuse_reason: str = ""
 
 
 class AskResponse(BaseModel):

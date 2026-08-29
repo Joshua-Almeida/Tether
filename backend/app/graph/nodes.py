@@ -10,7 +10,12 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from app.config import get_settings
 from app.graph.state import CRAGState
 from app.llm import chat_model
-from app.rag.citations import filter_citations, is_refuse_text, parse_citation_ids
+from app.rag.citations import (
+    filter_citations,
+    is_refuse_text,
+    parse_citation_ids,
+    sentences_without_citations,
+)
 from app.rag.store import retrieve
 
 REFUSE_ANSWER = (
@@ -21,7 +26,7 @@ REFUSE_ANSWER = (
 GRADE_SYSTEM = (
     "You are a strict relevance grader for corrective RAG. "
     "A passage is relevant only if it contains facts that could support answering the question. "
-    "Return JSON only."
+    "Score each passage from 0 to 1. Return JSON only."
 )
 
 REWRITE_SYSTEM = (
@@ -69,7 +74,22 @@ def retrieve_node(state: CRAGState) -> dict[str, Any]:
     }
 
 
-def _parse_grades(raw: str, documents: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _score_relevant(row: dict[str, Any], threshold: float) -> bool:
+    raw = row.get("score")
+    if raw is not None and raw != "":
+        try:
+            return float(raw) >= threshold
+        except (TypeError, ValueError):
+            pass
+    return bool(row.get("relevant", False))
+
+
+def _parse_grades(
+    raw: str,
+    documents: list[dict[str, Any]],
+    threshold: float | None = None,
+) -> list[dict[str, Any]]:
+    cutoff = get_settings().grade_relevance_threshold if threshold is None else threshold
     match = JSON_BLOCK.search(raw or "")
     payload = json.loads(match.group(0) if match else raw)
     by_index: dict[int, dict[str, Any]] = {}
@@ -82,7 +102,7 @@ def _parse_grades(raw: str, documents: list[dict[str, Any]]) -> list[dict[str, A
             {
                 "chunk_id": doc["chunk_id"],
                 "source": doc["source"],
-                "relevant": bool(row.get("relevant", False)),
+                "relevant": _score_relevant(row, cutoff),
                 "reason": str(row.get("reason", "no grade returned")),
             }
         )
@@ -99,7 +119,7 @@ def grade_node(state: CRAGState) -> dict[str, Any]:
     prompt = (
         f"Question: {state['question']}\n\nPassages:\n"
         + "\n\n".join(lines)
-        + '\n\nReturn JSON: {"grades":[{"index":1,"relevant":true,"reason":"short"}]}'
+        + '\n\nReturn JSON: {"grades":[{"index":1,"score":0.8,"reason":"short"}]}'
     )
     message = chat_model().invoke(
         [SystemMessage(content=GRADE_SYSTEM), HumanMessage(content=prompt)]
@@ -121,16 +141,36 @@ def rewrite_node(state: CRAGState) -> dict[str, Any]:
     }
 
 
+def _refuse(reason: str) -> dict[str, Any]:
+    return {
+        "decision": "refuse",
+        "answer": REFUSE_ANSWER,
+        "citations": [],
+        "refuse_reason": reason,
+    }
+
+
+def finalize_generate(answer: str, numbered: list[dict[str, Any]]) -> dict[str, Any]:
+    if is_refuse_text(answer) or not parse_citation_ids(answer):
+        return _refuse("generate_refused_or_uncited")
+    citations = filter_citations(answer, numbered)
+    if not citations:
+        return _refuse("citation_mismatch")
+    if sentences_without_citations(answer):
+        return _refuse("uncited_sentences")
+    return {
+        "decision": "answer",
+        "answer": answer,
+        "citations": citations,
+        "refuse_reason": "",
+    }
+
+
 def generate_node(state: CRAGState) -> dict[str, Any]:
     relevant_ids = {item["chunk_id"] for item in state.get("graded", []) if item.get("relevant")}
     passages = [doc for doc in state.get("documents", []) if doc["chunk_id"] in relevant_ids]
     if not passages:
-        return {
-            "decision": "refuse",
-            "answer": REFUSE_ANSWER,
-            "citations": [],
-            "refuse_reason": "no_relevant_passages",
-        }
+        return _refuse("no_relevant_passages")
     numbered: list[dict[str, Any]] = []
     lines: list[str] = []
     for index, doc in enumerate(passages, start=1):
@@ -149,34 +189,8 @@ def generate_node(state: CRAGState) -> dict[str, Any]:
     message = chat_model(temperature=0).invoke(
         [SystemMessage(content=GENERATE_SYSTEM), HumanMessage(content=prompt)]
     )
-    answer = str(message.content).strip()
-    if is_refuse_text(answer) or not parse_citation_ids(answer):
-        return {
-            "decision": "refuse",
-            "answer": REFUSE_ANSWER,
-            "citations": [],
-            "refuse_reason": "generate_refused_or_uncited",
-        }
-    citations = filter_citations(answer, numbered)
-    if not citations:
-        return {
-            "decision": "refuse",
-            "answer": REFUSE_ANSWER,
-            "citations": [],
-            "refuse_reason": "citation_mismatch",
-        }
-    return {
-        "decision": "answer",
-        "answer": answer,
-        "citations": citations,
-        "refuse_reason": "",
-    }
+    return finalize_generate(str(message.content).strip(), numbered)
 
 
 def refuse_node(state: CRAGState) -> dict[str, Any]:
-    return {
-        "decision": "refuse",
-        "answer": REFUSE_ANSWER,
-        "citations": [],
-        "refuse_reason": state.get("refuse_reason") or "graded_irrelevant",
-    }
+    return _refuse(state.get("refuse_reason") or "graded_irrelevant")

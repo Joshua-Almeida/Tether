@@ -20,6 +20,7 @@ export type PipelineTrace = {
   retrieved_count: number;
   graded: GradedChunk[];
   decision: "answer" | "refuse";
+  refuse_reason?: string;
 };
 
 export type AskResponse = {

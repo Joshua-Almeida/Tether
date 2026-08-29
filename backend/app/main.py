@@ -75,5 +75,6 @@ def ask(payload: AskRequest) -> AskResponse:
             retrieved_count=len(state.get("documents") or []),
             graded=graded,
             decision="answer" if decision == "answer" else "refuse",
+            refuse_reason=state.get("refuse_reason") or "",
         ),
     )

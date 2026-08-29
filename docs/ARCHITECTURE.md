@@ -64,11 +64,11 @@ Settings are loaded once (`lru_cache`). Restart uvicorn after editing `.env`.
 
 Retrieve is dense-only: `Chroma.similarity_search` with `RETRIEVE_K` (default 6). There is no BM25 hybrid in this tree.
 
-Grade asks the chat model for JSON `{ "grades": [{ "index", "relevant", "reason" }] }`. Relevance is a boolean from the LLM, not a cosine cutoff. There is no `GRADE_RELEVANCE_THRESHOLD` setting.
+Grade asks the chat model for JSON `{ "grades": [{ "index", "score", "reason" }] }`. `relevant` is `score >= GRADE_RELEVANCE_THRESHOLD` (default **0.5**). If `score` is missing, the boolean `relevant` field is used.
 
-Generate keeps only passages marked relevant, numbers them `[1]…`, and requires citations. It refuses if the model returns `REFUSE`, if there are no `[n]` ids, or if `filter_citations` yields an empty list. `sentences_without_citations` exists and is unit-tested but is **not** called on the generate path yet.
+Generate keeps only passages marked relevant, numbers them `[1]…`, then `finalize_generate`: refuse on `REFUSE` / no `[n]` ids, empty `filter_citations`, or long sentences without a citation (`sentences_without_citations`). Rewrite budget remains `REWRITE_MAX` (default 1).
 
-`refuse_reason` is stored on graph state (`no_relevant_passages`, `generate_refused_or_uncited`, `citation_mismatch`, `graded_irrelevant`) but is **not** copied into `PipelineTrace` / the UI.
+`refuse_reason` is on graph state and on `PipelineTrace` (`no_relevant_passages`, `generate_refused_or_uncited`, `citation_mismatch`, `uncited_sentences`, `graded_irrelevant`). The desk shows it muted under Decision.
 
 ## Citations
 
@@ -77,7 +77,7 @@ Generate keeps only passages marked relevant, numbers them `[1]…`, and require
 - `parse_citation_ids` — unique `[n]` in first-seen order
 - `filter_citations` — keep numbered passages whose `id` appears in the answer
 - `is_refuse_text` — empty or starts with `REFUSE`
-- `sentences_without_citations` — sentences ≥ 24 chars with no `[n]` (unused in generate)
+- `sentences_without_citations` — sentences ≥ 24 chars with no `[n]`; generate refuses if any remain
 
 The API never returns footnotes for a refused answer.
 
