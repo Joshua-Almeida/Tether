@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
 
     embedding_model: str = "text-embedding-3-small"
+    embedding_base_url: str = ""
+    embedding_api_key: str = ""
 
     api_host: str = "127.0.0.1"
     api_port: int = 8000
@@ -57,6 +59,18 @@ class Settings(BaseSettings):
         if self.fastrouter_api_key:
             return self.fastrouter_api_key
         return self.openai_api_key
+
+    @property
+    def embedding_endpoint(self) -> str:
+        if self.embedding_base_url.strip():
+            return self.embedding_base_url.rstrip("/")
+        return self.openai_compatible_base
+
+    @property
+    def embedding_key(self) -> str:
+        if self.embedding_api_key.strip():
+            return self.embedding_api_key
+        return self.openai_compatible_key
 
     @property
     def cors_origin_list(self) -> list[str]:

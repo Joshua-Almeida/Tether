@@ -30,14 +30,8 @@ def chat_model(settings: Settings | None = None, temperature: float = 0) -> Chat
 
 def embedding_model(settings: Settings | None = None) -> OpenAIEmbeddings:
     settings = require_llm(settings)
-    if settings.openai_api_key:
-        return OpenAIEmbeddings(
-            model=settings.embedding_model,
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url.rstrip("/"),
-        )
     return OpenAIEmbeddings(
         model=settings.embedding_model,
-        api_key=settings.openai_compatible_key,
-        base_url=settings.openai_compatible_base,
+        api_key=settings.embedding_key,
+        base_url=settings.embedding_endpoint,
     )

@@ -14,7 +14,7 @@ Metadata `chunk_id = {rfc}:{index}` is what citations hang on. Source ids (`rfc7
 
 Today retrieve is **dense only** (`similarity_search`). BM25 would help exact tokens: `IHL`, `SYN`, port `443`, field widths. Dense helps paraphrase (“how long does a packet live” → TTL). Hybrid (BM25 + dense, then fuse) is optional later; skipping it keeps the demo one failure mode: embedding quality.
 
-Embeddings must match the model that built the index. Rebuild after changing `EMBEDDING_MODEL`. FastRouter often has no `/embeddings` for `text-embedding-3-small`. The code already prefers **OpenAI embeddings when `OPENAI_API_KEY` is set**, even if chat runs on FastRouter. That split is a feature, not a bug — say so.
+Embeddings must match the model that built the index. Rebuild after changing `EMBEDDING_MODEL`. Default: same FastRouter/OpenAI gateway as chat. Override with `EMBEDDING_BASE_URL` if you need OpenAI embeddings while chat stays on FastRouter.
 
 ## CRAG / Self-RAG in *this* graph
 
@@ -51,11 +51,11 @@ Do not claim “100% grounded” while uncited sentences still pass. Say: “cit
 - **Rewrite loops.** Budget 1 prevents infinite rewrite. A bad rewrite can retrieve worse chunks than the original question.
 - **Uncited sentences.** Model cites `[1]` once then adds extra facts. Filter keeps the passage; it does not strip the sentence. Wire `sentences_without_citations` to refuse those.
 - **Citation mismatch.** Model invents `[9]` → empty `filter_citations` → refuse. Good.
-- **FastRouter embedding mismatch.** Chat works, ingest/ask fail on embeddings. Fix: OpenAI embeddings + FastRouter chat, or a FastRouter embedding model that actually exists.
+- **FastRouter embedding mismatch.** If ingest 401s, the embedding gateway or key is wrong. Default is the same FastRouter/OpenAI endpoint as chat. Override with `EMBEDDING_BASE_URL` / `EMBEDDING_API_KEY` if you need OpenAI vectors while chat stays on FastRouter.
 - **Empty index.** Health `index_ready: false`; Ask **409**. Ingest wipes `data/chroma` and rebuilds collection `tether_rfc`.
 - **Stale settings.** `get_settings` is cached; `.env` edits need an API restart.
 
-`GRADE_RELEVANCE_THRESHOLD` is unused. Do not describe a numeric grade cutoff unless you wire it. Graders here are boolean JSON.
+There is no numeric grade cutoff in Settings. Graders here are boolean JSON. Do not describe a threshold unless you add one.
 
 ## Talking about the trace in an interview
 

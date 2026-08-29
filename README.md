@@ -21,7 +21,7 @@ flowchart TD
 
 ## Windows runbook (PowerShell)
 
-Two terminals. Repo path is `C:\Users\Joshua\grounded-rag`.
+Repo path: `C:\Users\Joshua\grounded-rag`. Use **two terminals**. Do not run `npm` from `backend`.
 
 ### 1. Env
 
@@ -31,9 +31,9 @@ Copy-Item .env.example .env
 notepad .env
 ```
 
-Paste `FASTROUTER_API_KEY` and/or `OPENAI_API_KEY`. If both are set, chat uses FastRouter and embeddings use OpenAI (see `docs/ARCHITECTURE.md`). Do not commit `.env`.
+Paste `FASTROUTER_API_KEY` and/or `OPENAI_API_KEY`. Chat and embeddings use FastRouter when that key is set (`text-embedding-3-small` works there). To force OpenAI embeddings while chat stays on FastRouter, set `EMBEDDING_BASE_URL` and `EMBEDDING_API_KEY`. Do not commit `.env`. Restart the API after editing `.env`.
 
-### 2. Backend venv
+### 2. Backend venv (once)
 
 ```powershell
 cd C:\Users\Joshua\grounded-rag
@@ -42,40 +42,53 @@ python -m venv backend\.venv
 pip install -r backend\requirements.txt
 ```
 
-### 3. Ingest + API (terminal 1)
+### 3. Two terminals
+
+If scripts are blocked: `Set-ExecutionPolicy -Scope Process Bypass`
+
+**Terminal 1 — API** (`http://127.0.0.1:8000`)
+
+```powershell
+cd C:\Users\Joshua\grounded-rag
+.\scripts\dev-api.ps1
+```
+
+That sets `PYTHONPATH` to `backend` and runs `python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000`.
+
+Equivalent by hand:
 
 ```powershell
 cd C:\Users\Joshua\grounded-rag\backend
 .\.venv\Scripts\Activate.ps1
 $env:PYTHONPATH = "."
-python -m app.ingest
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-If the venv was created at `backend\.venv`, activate with `C:\Users\Joshua\grounded-rag\backend\.venv\Scripts\Activate.ps1`. You can skip the CLI ingest and use **Ingest corpus** in the UI after the API is up.
-
-### 4. Frontend (terminal 2)
+**Terminal 2 — web** (`http://127.0.0.1:5173`)
 
 ```powershell
-cd C:\Users\Joshua\grounded-rag\frontend
-npm install
-npm run dev
+cd C:\Users\Joshua\grounded-rag
+.\scripts\dev-web.ps1
 ```
 
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api` to `127.0.0.1:8000` and binds IPv4 on purpose (Windows `localhost` can be IPv6-only).
+Vite binds **127.0.0.1** (Windows `localhost` can be IPv6-only) and proxies `/api` to port 8000.
 
-### 5. Try it
+### 4. Ingest, then ask
+
+Empty index: `GET /api/health` has `index_ready: false`. Ask returns **409** until you ingest (desk button **Ingest corpus**, or `POST /api/ingest`). CLI ingest, from `backend` with `PYTHONPATH=.`:
+
+```powershell
+python -m app.ingest
+```
 
 Grounded (should cite RFCs):
 
 - How many bits is the IPv4 version field, and what does Time to Live mean?
 - What default TCP ports do the http and https URI schemes use?
 
-Refuse (corpus cannot answer):
+Refuse (no fake footnotes):
 
 - Who won the 2018 FIFA World Cup?
-
-Empty index: health reports `index_ready: false`; Ask returns **409** until you ingest.
 
 ## Tests and evals
 

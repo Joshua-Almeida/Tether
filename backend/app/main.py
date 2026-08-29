@@ -53,7 +53,7 @@ def ask(payload: AskRequest) -> AskResponse:
     if chunk_count() == 0:
         raise HTTPException(
             status_code=409,
-            detail="Vector index is empty. Run ingest first: python -m app.ingest",
+            detail="The index is empty. Use Ingest corpus on the desk first.",
         )
     try:
         state = run_crag(payload.question)

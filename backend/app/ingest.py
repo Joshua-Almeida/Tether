@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-import shutil
 
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config import get_settings
 from app.llm import require_llm
-from app.rag.store import chroma, corpus_dir
+from app.rag.store import chroma, corpus_dir, reset_collection
 
 
 def load_sources() -> list[dict]:
@@ -48,9 +47,8 @@ def ingest() -> dict:
     require_llm()
     settings = get_settings()
     persist = settings.chroma_path
-    if persist.exists():
-        shutil.rmtree(persist)
     persist.mkdir(parents=True, exist_ok=True)
+    reset_collection()
     documents = split_corpus()
     store = chroma()
     store.add_documents(documents)

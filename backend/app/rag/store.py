@@ -26,6 +26,16 @@ def corpus_dir() -> Path:
     return BACKEND_DIR / "corpus"
 
 
+def reset_collection() -> None:
+    settings = get_settings()
+    settings.chroma_path.mkdir(parents=True, exist_ok=True)
+    client = PersistentClient(path=str(settings.chroma_path))
+    try:
+        client.delete_collection(COLLECTION)
+    except Exception:
+        pass
+
+
 def retrieve(question: str, k: int | None = None) -> list[Document]:
     settings = get_settings()
     store = chroma()

@@ -43,7 +43,7 @@ The git folder may still be named `grounded-rag`. That path is not the product n
 3. `run_crag(question)` invokes the compiled graph and returns `CRAGState`.
 4. The handler maps `decision == "answer"` to `status: "answered"`, otherwise `refused`, plus `citations` and `trace`.
 
-`GET /api/health` reports `llm_configured`, `index_ready`, `chunk_count`, and corpus source ids (from files, not from Chroma). `POST /api/ingest` rebuilds the index (deletes `CHROMA_DIR` first).
+`GET /api/health` reports `llm_configured`, `index_ready`, `chunk_count`, and corpus source ids (from files, not from Chroma). `POST /api/ingest` rebuilds collection `tether_rfc` (deletes the collection, then adds chunks). It does not `rmtree` the persist folder, which locks on Windows while uvicorn is up.
 
 Settings are loaded once (`lru_cache`). Restart uvicorn after editing `.env`.
 
@@ -64,7 +64,7 @@ Settings are loaded once (`lru_cache`). Restart uvicorn after editing `.env`.
 
 Retrieve is dense-only: `Chroma.similarity_search` with `RETRIEVE_K` (default 6). There is no BM25 hybrid in this tree.
 
-Grade asks the chat model for JSON `{ "grades": [{ "index", "relevant", "reason" }] }`. Relevance is a boolean from the LLM, not a cosine cutoff. `GRADE_RELEVANCE_THRESHOLD` is in `.env.example` and is **not read** by `Settings`.
+Grade asks the chat model for JSON `{ "grades": [{ "index", "relevant", "reason" }] }`. Relevance is a boolean from the LLM, not a cosine cutoff. There is no `GRADE_RELEVANCE_THRESHOLD` setting.
 
 Generate keeps only passages marked relevant, numbers them `[1]…`, and requires citations. It refuses if the model returns `REFUSE`, if there are no `[n]` ids, or if `filter_citations` yields an empty list. `sentences_without_citations` exists and is unit-tested but is **not** called on the generate path yet.
 
@@ -98,7 +98,7 @@ Chunking: `RecursiveCharacterTextSplitter`, `CHUNK_SIZE=800`, `CHUNK_OVERLAP=120
 
 `app/config.py` prefers FastRouter when `FASTROUTER_API_KEY` is non-empty: chat `base_url` is `FASTROUTER_API_URL`, model is `FASTROUTER_LLM_MODEL`. Otherwise chat uses `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`.
 
-Embeddings always use `EMBEDDING_MODEL` (default `text-embedding-3-small`). If `OPENAI_API_KEY` is set, **embeddings go to OpenAI even when chat is on FastRouter**. That is intentional compatibility: FastRouter chat models often do not serve OpenAI embedding ids. If only FastRouter is configured, embeddings use the FastRouter base URL — that path fails unless the gateway implements `/embeddings` for the chosen model.
+Embeddings use `EMBEDDING_MODEL` (default `text-embedding-3-small`) on the **same gateway as chat**, unless `EMBEDDING_BASE_URL` / `EMBEDDING_API_KEY` are set. FastRouter serves this embedding id. A leftover `OPENAI_API_KEY` does not steal embedding traffic away from FastRouter (that used to 401 ingest when the OpenAI key was stale).
 
 `llm_configured` is true when either chat key is set. Ingest and ask still need a working embedding endpoint.
 
