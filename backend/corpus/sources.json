@@ -1,0 +1,26 @@
+[
+  {
+    "id": "rfc791",
+    "title": "Internet Protocol (RFC 791)",
+    "path": "rfc791-ipv4.txt",
+    "url": "https://www.rfc-editor.org/rfc/rfc791.txt"
+  },
+  {
+    "id": "rfc793",
+    "title": "Transmission Control Protocol (RFC 793)",
+    "path": "rfc793-tcp.txt",
+    "url": "https://www.rfc-editor.org/rfc/rfc793.txt"
+  },
+  {
+    "id": "rfc3986",
+    "title": "Uniform Resource Identifier (RFC 3986)",
+    "path": "rfc3986-uri.txt",
+    "url": "https://www.rfc-editor.org/rfc/rfc3986.txt"
+  },
+  {
+    "id": "rfc9110",
+    "title": "HTTP Semantics (RFC 9110)",
+    "path": "rfc9110-http.txt",
+    "url": "https://www.rfc-editor.org/rfc/rfc9110.txt"
+  }
+]

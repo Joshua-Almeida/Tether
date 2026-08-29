@@ -1,0 +1,13 @@
+IETF RFC excerpts for local ingest.
+
+These files are abbreviated copies of IETF RFC text for research and education.
+RFCs are copyright the IETF Trust and may be reproduced as specified in
+BCP 78 / the IETF Trust Legal Provisions (https://trustee.ietf.org/license-info).
+
+Sources:
+- RFC 791  https://www.rfc-editor.org/rfc/rfc791.txt
+- RFC 793  https://www.rfc-editor.org/rfc/rfc793.txt
+- RFC 3986 https://www.rfc-editor.org/rfc/rfc3986.txt
+- RFC 9110 https://www.rfc-editor.org/rfc/rfc9110.txt
+
+Do not add copyrighted books or paywalled papers to this folder.

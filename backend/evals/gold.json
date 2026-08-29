@@ -1,0 +1,34 @@
+{
+  "retrieval": [
+    {
+      "id": "ipv4-version-bits",
+      "question": "How many bits is the IPv4 version field?",
+      "must_sources": ["rfc791"]
+    },
+    {
+      "id": "tcp-handshake",
+      "question": "What control flags does TCP use in the three-way handshake?",
+      "must_sources": ["rfc793"]
+    },
+    {
+      "id": "uri-generic",
+      "question": "What are the main components of a generic URI?",
+      "must_sources": ["rfc3986"]
+    },
+    {
+      "id": "http-https-ports",
+      "question": "What default TCP ports do the http and https URI schemes use?",
+      "must_sources": ["rfc9110"]
+    }
+  ],
+  "refuse": [
+    {
+      "id": "world-cup",
+      "question": "Who won the 2018 FIFA World Cup?"
+    },
+    {
+      "id": "stock-price",
+      "question": "What is Apple's current stock price?"
+    }
+  ]
+}

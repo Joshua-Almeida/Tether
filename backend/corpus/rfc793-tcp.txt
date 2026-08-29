@@ -1,0 +1,70 @@
+Transmission Control Protocol - RFC 793 (excerpts)
+
+1. INTRODUCTION
+
+The Transmission Control Protocol (TCP) is intended to provide a
+reliable host-to-host protocol between hosts in packet-switched computer
+communication networks, and in interconnected systems of such networks.
+
+TCP is a connection-oriented, end-to-end reliable protocol designed to
+fit into a layered hierarchy of protocols which support multi-network
+applications. TCP provides for reliable inter-process communication
+between pairs of processes in host computers attached to distinct but
+interconnected computer communication networks.
+
+2. THE TCP RELIABILITY MECHANISM
+
+TCP recovers from data that is damaged, lost, duplicated, or delivered
+out of order by the internet communication system. This is achieved by
+assigning a sequence number to each octet transmitted, and requiring a
+positive acknowledgment (ACK) from the receiving TCP. If the ACK is not
+received within a timeout interval, the data is retransmitted.
+
+The TCP must recover from data that is damaged, lost, duplicated, or
+delivered out of order. Sequence numbers and acknowledgments provide
+this. Checksums detect damage. Duplicate segments are discarded.
+Out-of-order segments are reordered using sequence numbers.
+
+3. THREE-WAY HANDSHAKE
+
+The procedures used to establish and delete connections utilize the
+control flags SYN and ACK and the fields for sequence and acknowledgment
+numbers.
+
+To establish a connection, one TCP transmits a SYN segment, the other
+responds with a SYN and an ACK of the SYN, and the first TCP then ACKs
+the SYN from the other. This is called the three-way handshake.
+
+A connection progresses through a series of states: LISTEN, SYN-SENT,
+SYN-RECEIVED, ESTABLISHED, FIN-WAIT-1, FIN-WAIT-2, CLOSE-WAIT,
+CLOSING, LAST-ACK, TIME-WAIT, and the fictional state CLOSED.
+
+ESTABLISHED is the normal state for the data transfer phase of the
+connection. CLOSED is fictional because it represents the state when
+there is no TCB, and therefore, no connection.
+
+4. FLOW CONTROL
+
+TCP provides a means for the receiver to govern the amount of data sent
+by the sender. This is achieved by returning a "window" with every ACK
+indicating a range of acceptable sequence numbers beyond the last
+segment successfully received. The window indicates an allowed number of
+octets that the sender may transmit before receiving further permission.
+
+5. PORTS AND MULTIPLEXING
+
+To allow for many processes within a single Host to use TCP
+communication facilities simultaneously, the TCP provides a set of
+addresses or ports within each host. Concatenated with the network and
+host addresses from the internet communication layer, this forms a
+socket. A pair of sockets uniquely identifies each connection.
+
+A TCP connection is defined by a pair of sockets. A socket is the
+combination of an IP address and a TCP port number.
+
+6. URGENT DATA
+
+The objective of the TCP urgent mechanism is to allow the sending user
+to stimulate the receiving user to accept some urgent data and to permit
+the receiving TCP to indicate to the receiving user when all the
+currently known urgent data has been received by the user.

@@ -1,0 +1,95 @@
+Internet Protocol - RFC 791 (excerpts)
+
+1. INTRODUCTION
+
+The Internet Protocol is designed for use in interconnected systems of
+packet-switched computer communication networks. The internet protocol
+provides for transmitting blocks of data called datagrams from sources
+to destinations, where sources and destinations are hosts identified by
+fixed length addresses. The internet protocol also provides for
+fragmentation and reassembly of long datagrams, if necessary, for
+transmission through small packet networks.
+
+The internet protocol is specifically limited in scope to provide the
+functions necessary to deliver a package of bits (an internet datagram)
+from a source to a destination over an interconnected system of
+networks. There are no mechanisms to augment end-to-end data
+reliability, flow control, sequencing, or other services commonly found
+in host-to-host protocols. The internet protocol can capitalize on the
+services of its supporting networks to provide various types and
+qualities of service.
+
+3. SPECIFICATION
+
+3.1 Internet Header Format
+
+A summary of the contents of the internet header follows:
+
+Version: 4 bits
+The Version field indicates the format of the internet header. This
+document describes version 4 of the internet protocol (IPv4).
+
+IHL: 4 bits
+Internet Header Length is the length of the internet header in 32 bit
+words, and thus points to the beginning of the data. The minimum value
+for a correct header is 5 (20 octets).
+
+Type of Service: 8 bits
+The Type of Service provides an indication of the abstract parameters of
+the quality of service desired. These parameters are to be used to guide
+the selection of the actual service parameters when transmitting a
+datagram through a particular network.
+
+Total Length: 16 bits
+Total Length is the length of the datagram, measured in octets,
+including internet header and data. This field allows the length of a
+datagram to be up to 65,535 octets.
+
+Identification: 16 bits
+An identifying value assigned by the sender to aid in assembling the
+fragments of a datagram.
+
+Flags: 3 bits
+Various Control Flags. Bit 0 is reserved and must be zero. Bit 1 is the
+Don't Fragment (DF) flag. Bit 2 is the More Fragments (MF) flag.
+
+Fragment Offset: 13 bits
+This field indicates where in the original datagram this fragment
+belongs. The fragment offset is measured in units of 8 octets (64 bits).
+
+Time to Live: 8 bits
+This field indicates the maximum time the datagram is allowed to remain
+in the internet system. If this field contains the value zero, then the
+datagram must be destroyed. The time is measured in units of seconds,
+but since every module that processes a datagram must decrease the TTL
+by at least one even if it process the datagram in less than a second,
+the TTL must be thought of only as an upper bound on the time a datagram
+may exist.
+
+Protocol: 8 bits
+This field indicates the next level protocol used in the data portion of
+the internet datagram. The values for various protocols are specified in
+Assigned Numbers (for example, 6 for TCP and 17 for UDP).
+
+Header Checksum: 16 bits
+A checksum on the header only. Since some header fields change (e.g.,
+time to live), this is recomputed and verified at each point that the
+internet header is processed.
+
+Source Address: 32 bits
+The source address. An IPv4 address is a 32-bit value, typically written
+in dotted-decimal notation such as 192.0.2.1.
+
+Destination Address: 32 bits
+The destination address.
+
+3.2 Discussion
+
+The internet protocol implements two basic functions: addressing and
+fragmentation. The internet modules use the addresses carried in the
+internet header to transmit the internet datagram toward the
+destination. The selection of a path for transmission is called routing.
+
+The internet protocol treats each internet datagram as an independent
+entity unrelated to any other internet datagram. There are no
+connections or logical circuits (virtual or otherwise).
