@@ -12,9 +12,9 @@ Metadata `chunk_id = {rfc}:{index}` is what citations hang on. Source ids (`rfc7
 
 ## Embeddings vs BM25
 
-Today retrieve is **dense only** (`similarity_search`). BM25 would help exact tokens: `IHL`, `SYN`, port `443`, field widths. Dense helps paraphrase (“how long does a packet live” → TTL). Hybrid (BM25 + dense, then fuse) is optional later; skipping it keeps the demo one failure mode: embedding quality.
+Retrieve is **hybrid** by default: Chroma dense neighbors plus in-memory BM25 over the same chunks, fused with reciprocal rank fusion (`1 / (60 + rank)`). BM25 helps exact tokens: `IHL`, `SYN`, port `443`, field widths. Dense helps paraphrase (“how long does a packet live” → TTL). Set `RETRIEVE_MODE=dense` if you want the older single failure mode.
 
-Embeddings must match the model that built the index. Rebuild after changing `EMBEDDING_MODEL`. Default: same FastRouter/OpenAI gateway as chat. Override with `EMBEDDING_BASE_URL` if you need OpenAI embeddings while chat stays on FastRouter.
+Embeddings must match the model that built the index. Rebuild after changing `EMBEDDING_MODEL`. Default: same FastRouter/OpenAI gateway as chat. Override with `EMBEDDING_BASE_URL` if you need OpenAI embeddings while chat stays on FastRouter. Ingest also stamps `section` from the last numbered RFC heading before each chunk; splits are still character-based (800 / 120).
 
 ## CRAG / Self-RAG in *this* graph
 
@@ -32,6 +32,8 @@ It is **not** full Self-RAG (no per-token retrieve tokens, no critique-then-rege
 
 Generate also refuses if the model says `REFUSE`, emits no `[n]`, citation ids do not match numbered passages, or a long sentence has no citation. That is a faithfulness gate on the way out, not a second graph.
 
+**Naive mode** is the ablation: same retrieve, then generate from every neighbor, with general knowledge allowed and no refuse gate. Compare runs both. World Cup is the slide: grounded refuses, naive still answers. Say that out loud.
+
 ## Metrics
 
 Gold lives in `backend/evals/gold.json`.
@@ -43,7 +45,7 @@ Gold lives in `backend/evals/gold.json`.
 | Faithfulness | Answer claims supported by passages | `sentences_without_citations` refuses long uncited sentences even when some `[n]` exist |
 | Refusal accuracy | Out-of-corpus questions do not get fake footnotes | Gold `refuse` rows must `decision == refuse` |
 
-`--skip-llm` is retrieval only (still needs an ingested index and embeddings). Full `python evals/run_eval.py` calls the live graph. Retrieval misses fail the process. Faith/refuse LLM misses print FAIL and a note; they do not crash the runner. A full run on this laptop scored 1.00 on retrieval, faith, and refuse; reproduce a miss before treating it as a product bug.
+`--skip-llm` is retrieval only (still needs an ingested index and embeddings). Full `python evals/run_eval.py` calls the live graph. Retrieval misses fail the process. Faith/refuse LLM misses print FAIL and a note; they do not crash the runner. The briefing **Score retrieval gold** button is the same retrieval check over HTTP (`GET /api/eval/retrieval`). A full run on this laptop scored 1.00 on retrieval, faith, and refuse; reproduce a miss before treating it as a product bug.
 
 ## Failure modes
 
@@ -59,8 +61,10 @@ Gold lives in `backend/evals/gold.json`.
 
 ## Talking about the trace in an interview
 
-The composer shows retrieve / grade / rewrite / decision, plus a muted **Reason** when the graph refuses (`graded_irrelevant`, `uncited_sentences`, …).
+The composer shows retrieve / grade / rewrite / decision, expandable graded passages (score + reason + snippet), plus a muted **Reason** when the graph refuses (`graded_irrelevant`, `uncited_sentences`, …).
 
-Walk a grounded question: retrieve 6 → some relevant → rewrite skipped → answer + footnotes. Walk World Cup: retrieve still returns *something* (nearest neighbors), grades should mark them irrelevant, rewrite once, still irrelevant, refuse, **no footnotes**. If grades are sloppy, you might see a rewrite then still refuse — that is the budget doing its job.
+Start on **Briefing** if the reviewer has not seen the repo. Then the desk: ingest if the chunk pill is empty. Walk a grounded IPv4 question: retrieve 6 hybrid → some relevant → rewrite skipped → answer + footnotes. Click `[n]`. Open a passage row.
+
+Walk World Cup on **Compare**: retrieve still returns *something* (nearest neighbors), grades should mark them irrelevant, rewrite once, still irrelevant, refuse, **no footnotes**. Naive answers anyway and the blotter writes the contrast sentence. If grades are sloppy, you might see a rewrite then still refuse — that is the budget doing its job.
 
 Open the folio while you talk: empty → loading line → either serif answer with `[n]` or a refused block with the “no footnotes” hint. That is the product, not the graph diagram.

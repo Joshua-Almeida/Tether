@@ -12,3 +12,4 @@ class CRAGState(TypedDict, total=False):
     decision: str
     refuse_reason: str
     error: str
+    warnings: list[str]

@@ -10,23 +10,28 @@ frontend/
   vite.config.ts          # host 127.0.0.1:5173, proxy /api → 127.0.0.1:8000
   src/
     main.tsx
-    App.tsx               # desk (composer) + folio
-    api.ts                # getHealth, ingestCorpus, askQuestion
+    App.tsx               # desk | briefing
+    Briefing.tsx
+    Composer.tsx / Folio.tsx / Trace.tsx
+    api.ts                # health, ingest, ask, compare, corpus, retrieval eval
     styles.css
 
 backend/
   app/                    # Python package name is app — do not rename
-    main.py               # FastAPI: /api/health, /api/ingest, /api/ask
+    main.py               # FastAPI: health, ingest, ask, compare, corpus, eval/retrieval
+    respond.py            # AskResponse mapping + contrast line
     config.py             # pydantic-settings from repo-root .env
     llm.py                # ChatOpenAI + OpenAIEmbeddings
     ingest.py             # split RFC files, wipe + rebuild Chroma
     schemas.py
     graph/
       crag.py             # compile + run_crag
+      naive.py            # retrieve + generate, no refuse gate
       nodes.py            # retrieve, grade, rewrite, generate, refuse
       state.py
     rag/
-      store.py            # Chroma collection tether_rfc
+      store.py            # Chroma collection tether_rfc; hybrid retrieve
+      hybrid.py           # BM25 + reciprocal rank fusion
       citations.py
   corpus/                 # RFC text + sources.json
   data/chroma/            # gitignored index
@@ -38,12 +43,12 @@ The git folder may still be named `grounded-rag`. That path is not the product n
 
 ## Request flow
 
-1. The desk POSTs JSON `{ "question": "..." }` to `/api/ask` (same origin via the Vite proxy).
-2. `ask` in `app/main.py` rejects missing keys (**503**) and an empty index (**409**).
-3. `run_crag(question)` invokes the compiled graph and returns `CRAGState`.
-4. The handler maps `decision == "answer"` to `status: "answered"`, otherwise `refused`, plus `citations` and `trace`.
+1. The desk POSTs JSON `{ "question": "...", "mode": "grounded" | "naive" }` to `/api/ask` (same origin via the Vite proxy). Compare POSTs the question to `/api/compare` and runs both pipelines.
+2. Handlers reject missing keys (**503**) and an empty index (**409**).
+3. `grounded` calls `run_crag`. `naive` calls `run_naive` (retrieve + generate, no grade / rewrite / refuse gate).
+4. `respond.ask_response` maps graph state to `status`, `citations`, `trace` (including steps, retrieval method, grade scores), `latency_ms`, and `warnings`.
 
-`GET /api/health` reports `llm_configured`, `index_ready`, `chunk_count`, and corpus source ids (from files, not from Chroma). `POST /api/ingest` rebuilds collection `tether_rfc` (deletes the collection, then adds chunks). It does not `rmtree` the persist folder, which locks on Windows while uvicorn is up.
+`GET /api/health` reports `llm_configured`, `index_ready`, `chunk_count`, corpus source ids (from files, not from Chroma), `retrieve_mode`, and `rewrite_max`. `GET /api/corpus` returns RFC titles and canonical URLs. `GET /api/eval/retrieval` scores gold `must_sources` against the live index. `POST /api/ingest` rebuilds collection `tether_rfc` (deletes the collection, then adds chunks). It does not `rmtree` the persist folder, which locks on Windows while uvicorn is up.
 
 Settings are loaded once (`lru_cache`). Restart uvicorn after editing `.env`.
 
@@ -62,7 +67,7 @@ Settings are loaded once (`lru_cache`). Restart uvicorn after editing `.env`.
 - Else if `rewrite_count < REWRITE_MAX` (default **1**) → **rewrite**
 - Else → **refuse**
 
-Retrieve is dense-only: `Chroma.similarity_search` with `RETRIEVE_K` (default 6). There is no BM25 hybrid in this tree.
+Retrieve defaults to **hybrid**: dense `similarity_search` plus in-memory BM25 over the same Chroma documents, fused with reciprocal rank fusion (`app/rag/hybrid.py`). Set `RETRIEVE_MODE=dense` to skip BM25. `RETRIEVE_K` default is 6.
 
 Grade asks the chat model for JSON `{ "grades": [{ "index", "score", "reason" }] }`. `relevant` is `score >= GRADE_RELEVANCE_THRESHOLD` (default **0.5**). If `score` is missing, the boolean `relevant` field is used.
 
@@ -92,7 +97,7 @@ The API never returns footnotes for a refused answer.
 | `backend/evals/gold.json` | Retrieval + refuse gold |
 | `.env` | Secrets at **repo root** (also `backend/.env` if present) |
 
-Chunking: `RecursiveCharacterTextSplitter`, `CHUNK_SIZE=800`, `CHUNK_OVERLAP=120`, separators `\n\n`, `\n`, `. `, ` `. Metadata: `source`, `title`, `url`, `chunk_id` as `{source_id}:{index}`.
+Chunking: `RecursiveCharacterTextSplitter`, `CHUNK_SIZE=800`, `CHUNK_OVERLAP=120`, separators `\n\n`, `\n`, `. `, ` `. Metadata: `source`, `title`, `url`, `chunk_id` as `{source_id}:{index}`, and `section` from the last numbered RFC heading before the chunk. Splits are still character-based, not section-aware.
 
 ## Env: FastRouter vs OpenAI
 

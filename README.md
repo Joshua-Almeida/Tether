@@ -1,6 +1,8 @@
 # Tether
 
-Tether is cite-or-refuse Corrective RAG over a local IETF RFC corpus (IPv4, TCP, URI, HTTP). It retrieves passages, grades them, optionally rewrites the query, then either answers with numbered footnotes or refuses. It does not guess from model memory.
+Tether is cite-or-refuse Corrective RAG over a local IETF RFC corpus (IPv4, TCP, URI, HTTP). It retrieves passages with hybrid search (dense + BM25), grades them, optionally rewrites the query, then either answers with numbered footnotes or refuses. It does not guess from model memory.
+
+The desk can also run **naive RAG** on the same question — retrieve, then let the model talk — so you can show the ablation. **Compare** runs both. **Briefing** is the talk track: purpose, what is hard, how the graph works, corpus, and retrieval gold.
 
 **Who it is for.** Anyone who needs to show that an LLM answer is tied to retrieved text — resume reviewers, interviewers, and anyone tired of fluent hallucinations. The problem it attacks is uncited generation: if the local corpus cannot support a claim, the desk refuses instead of inventing a footnote.
 
@@ -89,6 +91,8 @@ Grounded (should cite RFCs):
 Refuse (no fake footnotes):
 
 - Who won the 2018 FIFA World Cup?
+
+On the desk, **Grounded** is cite-or-refuse CRAG. **Naive** is retrieve-then-generate with the faithfulness gate off. **Compare** runs both on one question — use it on the World Cup prompt. **Briefing** is the talk track and a live retrieval-gold score. Re-ingest once if an older index is missing section headings on footnotes.
 
 ## Tests and evals
 

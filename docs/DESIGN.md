@@ -6,10 +6,11 @@ Instructions for the Tether desk UI. Tokens live in `frontend/src/styles.css` (`
 
 The product is a **research desk**, not a chat product and not a dashboard.
 
-- **Composer** (left, dark walnut blotter): the question, actions, examples, and pipeline trace. This is the working surface.
-- **Folio** (right, parchment): the cited answer, footnotes, empty/loading/refused states. This is what you would take away from the desk.
+- **Composer** (left, dark walnut blotter): the question, pipeline chips, actions, examples, and inspectable trace. This is the working surface.
+- **Folio** (right, parchment): the cited answer, footnotes, empty/loading/refused states. Compare stacks a grounded folio above a naive folio.
+- **Briefing** (full-width parchment packet): purpose, difficulty, graph, corpus, retrieval gold. Not a marketing landing page.
 
-One question, one folio. No thread history, no settings island, no marketing landing page.
+One question at a time. No thread history. No settings island.
 
 ## Tokens
 
@@ -69,7 +70,9 @@ Do not use Outfit. Do not use Geist. One accent: verdigris.
 - **Examples** — dashed hairline rows, mono label + body question. Click fills the composer; it does not submit.
 - **Pills** — LLM ready / No API key, chunk count / Index empty. Ok = verdigris, warn = clay.
 - **Footnotes** — ordered list, mono `[n]`, title · source, quote. Click or hover from `[n]` in the answer should highlight the matching note when cheap.
-- **Trace** — retrieve / grade / rewrite / decision as labeled rows, not a nested card.
+- **Trace** — retrieve / grade / rewrite / decision as labeled rows, plus expandable graded passages (score, reason, snippet). Not a nested card.
+- **Pipeline chips** — Grounded / Naive / Compare. Same 42px hit, mono label, no native `<select>`.
+- **Masthead nav** — Desk / Briefing as pill buttons, not tabs-as-chrome.
 
 If you add a dropdown, **do not use a native `<select>`**. Match Tether chips or a custom list (same mono labels, hairline, 42px rows).
 
@@ -83,6 +86,8 @@ If you add a dropdown, **do not use a native `<select>`**. Match Tether chips or
 | Backend down | pills + banner | Unreachable copy; page must still render |
 | Refused | folio | Distinct from cited answers (clay family). No fake footnotes |
 | Cited answer | folio | Display serif + `[n]` superscripts + footnote list |
+| Compare | dual folio | Grounded sheet above naive sheet; contrast sentence on the blotter |
+| Briefing | full-width parchment | Purpose, difficulty, graph, corpus, gold. Packet voice, not a landing page |
 
 ## Motion
 
@@ -108,4 +113,4 @@ Tether is a walnut desk and a parchment folio. It is **not**:
 
 Steal **principles** only: CSS variables, hairlines over heavy shadows, 42–44px pills, mono uppercase eyebrows, one accent, empty/loading/error as designed states, reduced motion, human errors.
 
-Voice: precise, no exclamation marks, no emoji. Wordmark is **Tether**. Tagline: answers stay tied to cited passages, or the desk refuses.
+Voice: precise, no exclamation marks, no emoji. Wordmark is **Tether**. Tagline: answers stay tied to cited passages, or the desk refuses. Briefing copy should sound like a research packet, not a product hunt blurb.

@@ -13,6 +13,8 @@ export default function StatusPills({ health }: Props) {
     );
   }
 
+  const retrieve = health.retrieve_mode === "dense" ? "Dense retrieve" : "Hybrid retrieve";
+
   return (
     <div className="status">
       <span className={`pill ${health.llm_configured ? "is-ok" : "is-warn"}`}>
@@ -21,6 +23,7 @@ export default function StatusPills({ health }: Props) {
       <span className={`pill ${health.index_ready ? "is-ok" : "is-warn"}`}>
         {health.index_ready ? `${health.chunk_count} chunks` : "Index empty"}
       </span>
+      <span className={`pill ${health.index_ready ? "is-ok" : ""}`}>{retrieve}</span>
     </div>
   );
 }

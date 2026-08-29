@@ -1,8 +1,14 @@
+export type PipelineMode = "grounded" | "naive";
+export type DeskMode = PipelineMode | "compare";
+
 export type GradedChunk = {
   chunk_id: string;
   source: string;
   relevant: boolean;
   reason: string;
+  score?: number | null;
+  snippet?: string;
+  section?: string;
 };
 
 export type Citation = {
@@ -12,6 +18,7 @@ export type Citation = {
   url: string;
   chunk_id: string;
   quote: string;
+  section?: string;
 };
 
 export type PipelineTrace = {
@@ -21,6 +28,9 @@ export type PipelineTrace = {
   graded: GradedChunk[];
   decision: "answer" | "refuse";
   refuse_reason?: string;
+  retrieval?: "hybrid" | "dense";
+  steps?: string[];
+  mode?: PipelineMode;
 };
 
 export type AskResponse = {
@@ -29,6 +39,15 @@ export type AskResponse = {
   citations: Citation[];
   trace: PipelineTrace;
   error?: string | null;
+  mode?: PipelineMode;
+  latency_ms?: number;
+  warnings?: string[];
+};
+
+export type CompareResponse = {
+  grounded: AskResponse;
+  naive: AskResponse;
+  contrast: string;
 };
 
 export type Health = {
@@ -37,6 +56,26 @@ export type Health = {
   index_ready: boolean;
   chunk_count: number;
   sources: string[];
+  retrieve_mode?: "hybrid" | "dense";
+  rewrite_max?: number;
+};
+
+export type CorpusSource = {
+  id: string;
+  title: string;
+  url: string;
+};
+
+export type RetrievalEvalRow = {
+  id: string;
+  question: string;
+  must_sources: string[];
+  hit: boolean;
+};
+
+export type RetrievalEval = {
+  recall: number;
+  rows: RetrievalEvalRow[];
 };
 
 function humanDetail(payload: unknown): string | null {
@@ -86,6 +125,23 @@ export function humanizeError(err: unknown, fallback: string): string {
   return raw;
 }
 
+export function warningCopy(code: string): string {
+  switch (code) {
+    case "faithfulness_off":
+      return "Faithfulness is off. The model may answer from memory.";
+    case "uncited_sentences":
+      return "At least one long sentence has no [n] citation.";
+    case "invented_citations":
+      return "The answer cites an id that was never retrieved.";
+    case "citation_mismatch":
+      return "Cited ids do not match the numbered passages.";
+    case "no_citations":
+      return "No footnotes. This answer is likely from model memory.";
+    default:
+      return code.replace(/_/g, " ");
+  }
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -125,12 +181,27 @@ export function getHealth(): Promise<Health> {
   return api<Health>("/api/health");
 }
 
+export function getCorpus(): Promise<{ sources: CorpusSource[] }> {
+  return api("/api/corpus");
+}
+
+export function getRetrievalEval(): Promise<RetrievalEval> {
+  return api("/api/eval/retrieval");
+}
+
 export function ingestCorpus(): Promise<Record<string, unknown>> {
   return api("/api/ingest", { method: "POST" });
 }
 
-export function askQuestion(question: string): Promise<AskResponse> {
+export function askQuestion(question: string, mode: PipelineMode = "grounded"): Promise<AskResponse> {
   return api<AskResponse>("/api/ask", {
+    method: "POST",
+    body: JSON.stringify({ question, mode }),
+  });
+}
+
+export function compareQuestion(question: string): Promise<CompareResponse> {
+  return api<CompareResponse>("/api/compare", {
     method: "POST",
     body: JSON.stringify({ question }),
   });

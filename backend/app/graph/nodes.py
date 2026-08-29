@@ -52,6 +52,7 @@ def document_to_dict(doc: Document) -> dict[str, Any]:
         "title": str(doc.metadata.get("title", "")),
         "url": str(doc.metadata.get("url", "")),
         "chunk_id": str(doc.metadata.get("chunk_id", "")),
+        "section": str(doc.metadata.get("section", "")),
     }
 
 
@@ -98,12 +99,22 @@ def _parse_grades(
     graded: list[dict[str, Any]] = []
     for index, doc in enumerate(documents, start=1):
         row = by_index.get(index, {})
+        raw_score = row.get("score")
+        score: float | None
+        try:
+            score = float(raw_score) if raw_score is not None and raw_score != "" else None
+        except (TypeError, ValueError):
+            score = None
+        snippet = " ".join(str(doc.get("content") or "").split())
         graded.append(
             {
                 "chunk_id": doc["chunk_id"],
                 "source": doc["source"],
                 "relevant": _score_relevant(row, cutoff),
                 "reason": str(row.get("reason", "no grade returned")),
+                "score": score,
+                "snippet": snippet[:220],
+                "section": str(doc.get("section") or ""),
             }
         )
     return graded
@@ -182,6 +193,7 @@ def generate_node(state: CRAGState) -> dict[str, Any]:
                 "url": doc["url"],
                 "chunk_id": doc["chunk_id"],
                 "quote": doc["content"][:500],
+                "section": str(doc.get("section") or ""),
             }
         )
         lines.append(f"[{index}] ({doc['source']}) {doc['content']}")

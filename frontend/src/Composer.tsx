@@ -1,4 +1,6 @@
 import { FormEvent, ReactNode } from "react";
+import ModeChips from "./ModeChips";
+import type { DeskMode } from "./api";
 
 export type Example = {
   label: string;
@@ -8,8 +10,11 @@ export type Example = {
 type Props = {
   question: string;
   onQuestion: (value: string) => void;
+  mode: DeskMode;
+  onMode: (mode: DeskMode) => void;
   busy: "ask" | "ingest" | null;
   error: string | null;
+  contrast: string | null;
   examples: Example[];
   onAsk: (event: FormEvent) => void;
   onIngest: () => void;
@@ -19,22 +24,29 @@ type Props = {
 export default function Composer({
   question,
   onQuestion,
+  mode,
+  onMode,
   busy,
   error,
+  contrast,
   examples,
   onAsk,
   onIngest,
   children,
 }: Props) {
+  const askLabel =
+    busy === "ask" ? "Working…" : mode === "compare" ? "Compare" : "Ask";
+
   return (
     <section className="blotter">
       <p className="eyebrow">Composer</p>
       <h2>Ask the desk</h2>
       <p className="hint">
-        Answers stay tied to retrieved passages. If the corpus cannot support a claim, the desk
-        refuses.
+        Grounded mode cites retrieved passages or refuses. Naive mode is ordinary RAG: retrieve,
+        then let the model talk. Compare runs both on the same question.
       </p>
       <form onSubmit={onAsk}>
+        <ModeChips mode={mode} onMode={onMode} disabled={busy !== null} />
         <label className="field-label" htmlFor="question">
           Question
         </label>
@@ -45,7 +57,7 @@ export default function Composer({
         />
         <div className="actions">
           <button className="btn btn-primary" type="submit" disabled={busy !== null}>
-            {busy === "ask" ? "Working…" : "Ask"}
+            {askLabel}
           </button>
           <button
             className="btn btn-ghost"
@@ -62,6 +74,11 @@ export default function Composer({
           {error}
         </p>
       )}
+      {contrast && !error ? (
+        <p className="banner contrast" role="status">
+          {contrast}
+        </p>
+      ) : null}
       <div className="examples">
         {examples.map((example) => (
           <button
